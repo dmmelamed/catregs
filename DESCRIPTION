@@ -8,7 +8,7 @@ Description: Several useful functions for regression models with limited depende
 Depends:
     tidyverse, 
     MASS,
-    emmeans.
+    emmeans,
     countreg,
     pscl,
     nnet,
