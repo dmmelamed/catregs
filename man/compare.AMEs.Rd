@@ -22,7 +22,7 @@ compare.AMEs(margins.matrix,seed=1234,rounded=3,nsim=10000)
 }
 \value{
   \item{differnce}{The observed difference in the two AMEs.}
-  \item{p.value}{The p-value associated with the difference. This is the proportion of the simulated sample when the AMEs overlapped.}
+  \item{p.value}{The p-value associated with the difference. This is the proportion of the simulated sample when the AMEs overlapped.}}
 \references{
 }
 \author{
