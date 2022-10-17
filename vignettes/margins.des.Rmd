@@ -1,0 +1,47 @@
+---
+title: "margins.des"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the margins.des function.
+vignette: >
+  %\VignetteIndexEntry{lr.test}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+We often illustrate the implications of a regression model by graphing marginal means or fitted values from the model by levels of one or more predictors. Such graphs illustrate how the response changes as a function of predictors. This is a particularly useful strategy for explaining statistical interactions between independent variables. 
+
+Doing so entails creating a design matrix of response values for the independent variables. Software packages generally automate this process. Within R, the emmeans package allows you to set independent variable values, and then it has a few options for how to deal with variables that are not explicitly specified (e.g., proportional weighting, etc.). Stata does effectively the same thing, allowing users to specify values for some variables and imputing values for other variables. In either case, this process is automated, and just fitted values are reported. That is, users generally do not even look at the design matrix. 
+
+In the context of catregs, working with the design matrix may be necessary. Multi-category predictors and mathematically linked variables (interaction terms, squared-terms) may need to be adjusted (also true with emmeans). As such, it is good practice to examine the design matrix to ensure that the underlying data depict the patterns you want to illustrate. This is often overlooked. 
+
+margins.des makes the generation of such design matrices straightforward. Given a model object, margins.des pulls out the underlying data and sets all independent variables to their means. Users can alter this in two ways. First, users can set levels of independent variables. If multiple variables are listed, their categories are factorially crossed in the design matrix. Second, users can exclude variables from the design matrix. This is intended to be used with factor variables. Users exclude factor variables from the design matrix in the this step, and then factors are proportionally weighted in the margins.dat function. 
+
+
+The first application of margins.des creates a design matrix varying the states of "woman." It sets all covariates to their means by default. If we wanted to vary "woman" but look at only parents, we would use the second margins.des command.
+```{r}
+require(catregs)
+data("Mize19AH")
+m1 <- glm(alcB ~woman*parrole + age + race2 + race3 + race4 + income + ed1 + ed2 + ed3 + ed4,family="binomial",data=Mize19AH)
+margins.des(mod=m1,ivs=expand.grid(woman=c(0,1)))
+margins.des(mod=m1,ivs=expand.grid(woman=c(0,1),parrole=1))
+```
+
+Generally when illustrating statistical interaction effects we want to generate fitted values at factorially-crossed levels of independent variables. We use the base R function "expand.grid" inside the "ivs" option to do this. Below is an example for a 2x2 interaction:
+
+```{r}
+margins.des(mod=m1,ivs=expand.grid(woman=c(0,1),parrole=c(0,1)))
+
+```
+
+And here is a more complicated design matrix with a continuous variable. 
+```{r}
+margins.des(mod=m1,ivs=expand.grid(woman=c(0,1),income=seq(0,150,10)))
+```
+
+
+In practice, define an object using margins.des. Examine it and alter it as needed. Then generate fitted values using margins.dat.
+
+
+
+

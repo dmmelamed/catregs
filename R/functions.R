@@ -28,6 +28,18 @@ list.coef<-function(model,rounded=3,alpha=.05){
   outp<-list(out=out)
   return(outp)}
 
+compare.AMEs <- function(margins.matrix,seed=1234,rounded=3,nsim=10000){
+  difference <- margins.matrix$AME[1] - margins.matrix$AME[2]
+  if(difference>0){
+    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins.matrix$AME[1],sd=margins.matrix$SE[1]) - rnorm(nsim,mean=margins.matrix$AME[2],sd=margins.matrix$SE[2])) < 0) /nsim
+  }else{
+    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins.matrix$AME[1],sd=margins.matrix$SE[1]) - rnorm(nsim,mean=margins.matrix$AME[2],sd=margins.matrix$SE[2])) > 0) /nsim
+  }
+  out <- list(difference=round(difference,rounded),p.value=round(p.value,rounded))
+  return(out)
+}
+
+
 margins.des <- function(mod,ivs,excl="nonE"){
   X.mod <- mod$model[,-1]
   var.names<-colnames(X.mod)

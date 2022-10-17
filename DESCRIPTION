@@ -6,6 +6,10 @@ Author: David Melamed
 Maintainer: The package maintainer <dmmelamed@gmail.com>
 Description: Several useful functions for regression models with limited dependent variables. 
 Depends:
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+Suggests: 
     tidyverse, 
     MASS,
     emmeans,
@@ -13,7 +17,7 @@ Depends:
     pscl,
     nnet,
     marginaleffects,
-    ggpubr
-License: What license is it under?
-Encoding: UTF-8
-LazyData: true
+    ggpubr,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

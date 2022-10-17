@@ -1,0 +1,47 @@
+---
+title: "lr.test"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the lr.test function.
+vignette: >
+  %\VignetteIndexEntry{lr.test}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The lr.test was developed because models estimated with glm are not compatible with Likelihood-Ratio tests. Specifically, the output does not report p-values for such models. 
+
+Consider the following example. Here we will replicate results from Mize's (2019) analysis of the factors affecting the probability of drinking over some time interval. 
+Model 1 includes an interaction effect between being a woman and being a parent (parrole). Model 0 excludes the interaction effect. The results of the anova command show that the Chi-squared test statistic is 2.44 on 1 DF. It does not report a p-value.
+
+
+```{r echo=TRUE}
+require(catregs)
+data("Mize19AH")
+
+m1 <- glm(alcB ~woman*parrole + age + race2 + race3 + race4 + income + ed1 + ed2 + ed3 + ed4,family="binomial",data=Mize19AH)
+m0 <- glm(alcB ~woman + parrole + age + race2 + race3 + race4 + income + ed1 + ed2 + ed3 + ed4,family="binomial",data=Mize19AH)
+anova(m1,m0)
+```
+
+The p-value can simply be attained with the following:
+```{r}
+pchisq(2.44,1,lower.tail=FALSE)
+```
+
+Base R has a function that helps with computing the LR test. The logLik function returns or computes the solution to the likelihood function for models with one defined. For example:
+```{r}
+logLik(m1)
+logLik(m0)
+```
+
+The lr.test function relies on calls to the logLik function for computing the LR test and DF. It then sends a call to pchisq to compute the p-value. Further, the order of the models, in terms of full and reduced, does not matter. The function takes the absolute value so that the statistic is always positive (unlike the anova example above).
+
+Here is an application to the models defined above:
+```{r}
+lr.test(m1,m0)
+```
+
+
+
+
