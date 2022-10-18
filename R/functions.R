@@ -29,7 +29,7 @@ list.coef<-function(model,rounded=3,alpha=.05){
   out<-round(out,rounded)
   colnames(out)<-c("b","S.E.","Z","LL CI","UL CI","p-val","exp(b)","LL CI for exp(b)","UL CI for exp(b)","Percent")
   out <- data.frame(out,CI=paste(100*(1-alpha),"%"))
-  rownames(out)<-names(coef(model))
+  out <- data.frame(variables=names(coef(model)),out)
   outp<-list(out=out)
   return(outp)}
 
