@@ -1,13 +1,18 @@
 lr.test<-function(full.model,reduced.model){
   # "Note: It does not matter if you correctly identified the Full and Reduced Models. The function detects it based on DF.")
-  ll.f <-as.numeric(logLik(full.model))
-  ll.r <- as.numeric( logLik(reduced.model))
-  ll <- 2*abs(ll.r-ll.f)
-  df <- abs(length(coef(full.model))-length(coef(reduced.model)))
-  p.value <- pchisq(ll,df,lower.tail=FALSE)
-  out <- c("LL Full"=ll.f,"LL Reduced"=ll.r,
-           "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
-  return(out)}
+  n.f <- length(predict(full.model))
+  n.r <- length(predict(reduced.model))
+  if(n.f != n.r){print("The models were not fit to the same data! WTF")}else{
+    ll.f <-as.numeric(logLik(full.model))
+    ll.r <- as.numeric( logLik(reduced.model))
+    ll <- 2*abs(ll.r-ll.f)
+    df <- abs(length(coef(full.model))-length(coef(reduced.model)))
+    p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
+    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
+                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
+    return(out)}}
+
+
 list.coef<-function(model,rounded=3,alpha=.05){
   out<-matrix(0,nr=length(coef(model)),nc=10)
   out[,1]<-coef(model)
