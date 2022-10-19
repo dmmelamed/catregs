@@ -29,7 +29,16 @@ list.coef<-function(model,rounded=3,alpha=.05){
   out<-round(out,rounded)
   colnames(out)<-c("b","SE","z","ll","ul","p.val","exp.b","ll.exp.b","ul.exp.b","percent")
   out <- data.frame(out,CI=paste(100*(1-alpha),"%"))
-  out <- data.frame(variables=names(coef(model)),out)
+  if(class(model)[1]=="multinom"){
+    cn<-colnames(coef(model))
+    rn<-rownames(coef(model))
+    names <- paste(rn[1],cn)
+    for(i in 2:length(rn)){
+      namesi <- paste(rn[i],cn)
+      names <- c(names,namesi)}
+    out <- data.frame(variables=names,out)
+    }else{
+    out <- data.frame(variables=names(coef(model)),out)}
   outp<-list(out=out)
   return(outp)}
 
