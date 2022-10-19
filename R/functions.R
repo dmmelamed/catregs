@@ -75,7 +75,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
 
     if(sum(class(mod)=="lm")>0){
       probs<-data.frame(emmeans(mod,~1,type="response",weights="proportional",at=as.list(des[1,])))
-      if(nrow(des)>1){
+      if(nrow(des>1)){
         for(i in 2:nrow(des)){
           probsi<-data.frame(emmeans(mod,~1,type="response",weights="proportional",at=as.list(des[i,])))
           probs <- rbind(probs,probsi)}}
@@ -198,6 +198,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
         for(i in 2:nrow(des)){
           pi<-predict(mod,newdata=des[i,],type="response")
           p1<-c(p1,pi)}}
+      fits <- p1
       # Boot sampling dist
       p1.model<-mod$model
       p1.dist <-matrix(NA,nr=num.sample,nc=length(p1))
@@ -216,7 +217,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
       if(ncol(p1.dist)>1){for(i in 2:ncol(p1.dist)){
         p1.dist[,i]<-sort(p1.dist[,i])}}
       se <- apply(p1.dist,2,FUN="sd")
-      marginsdat<-data.frame(round(des,rounded),fitted=round(p1,rounded),
+      marginsdat<-data.frame(round(des,rounded),fitted=round(fits,rounded),
                              se=round(se,rounded),
                              ll=round(p1.dist[nrow(p1.dist)*(alpha/2),],rounded),
                              ul=round(p1.dist[nrow(p1.dist)*(1-(alpha/2)),],rounded))
