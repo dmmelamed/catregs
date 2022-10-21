@@ -12,6 +12,52 @@ lr.test<-function(full.model,reduced.model){
                       "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
     return(out)}}
 
+diagn <- function(model){
+  if(class(model)[1]=="glm"){
+    pearsonres<-residuals.glm(model,type="pearson")
+    h<-data.frame(influence.measures(model)$infmat)$hat
+    stdpres<-pearsonres/(sqrt(1-h))
+    deltabeta<-(pearsonres^2*h)/(1-h)^2
+    obs = 1:length(pearsonres)
+    devres<-residuals.glm(model,type="deviance")
+    out=data.frame(pearsonres,h,stdpres,deltabeta,obs,devres)
+  }
+  else if(class(model)[1]=="negbin"){
+    pearsonres<-residuals.glm(model,type="pearson")
+    h<-data.frame(influence.measures(model)$infmat)$hat
+    stdpres<-pearsonres/(sqrt(1-h))
+    deltabeta<-(pearsonres^2*h)/(1-h)^2
+    obs = 1:length(pearsonres)
+    devres<-residuals.glm(model,type="deviance")
+    out=data.frame(pearsonres,h,stdpres,deltabeta,obs,devres)
+  }
+
+  else if(class(model)[1]=="polr"){
+    out=c("Ordinal model: you should binarize it for diagnostics.")
+  }
+  else if(class(model)[1]=="multinom"){
+    out=c("Multinomial model: you should binarize it for diagnostics.")
+  }
+  else if(class(model)[1]=="vglm"){
+    out=c("Partial Proportional Odds model: you should binarize it for diagnostics.")
+  }
+  else if(class(model)[1]=="zeroinfl"){
+    pearsonres<-residuals(model,type="pearson")
+    obs = 1:length(pearsonres)
+    out=data.frame(pearsonres,obs)
+  }
+  else if(class(model)[1]=="zerotrunc"){
+    pearsonres<-residuals(model,type="pearson")
+    obs = 1:length(pearsonres)
+    out=data.frame(pearsonres,obs)
+  }
+  else if(class(model)[1]=="hurdle"){
+    pearsonres<-residuals(model,type="pearson")
+    obs = 1:length(pearsonres)
+    out=data.frame(pearsonres,obs)
+  }
+  else{out="Model type not supported."}
+  return(out)}
 
 list.coef<-function(model,rounded=3,alpha=.05){
   out<-matrix(0,nr=length(coef(model)),nc=10)
