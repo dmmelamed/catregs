@@ -18,6 +18,7 @@ diagn <- function(model){
     h<-data.frame(influence.measures(model)$infmat)$hat
     stdpres<-pearsonres/(sqrt(1-h))
     deltabeta<-(pearsonres^2*h)/(1-h)^2
+    deltabeta <- deltabeta/length(coef(model))
     obs = 1:length(pearsonres)
     devres<-residuals.glm(model,type="deviance")
     out=data.frame(pearsonres,h,stdpres,deltabeta,obs,devres)
@@ -27,6 +28,7 @@ diagn <- function(model){
     h<-data.frame(influence.measures(model)$infmat)$hat
     stdpres<-pearsonres/(sqrt(1-h))
     deltabeta<-(pearsonres^2*h)/(1-h)^2
+    deltabeta <- deltabeta/length(coef(model))
     obs = 1:length(pearsonres)
     devres<-residuals.glm(model,type="deviance")
     out=data.frame(pearsonres,h,stdpres,deltabeta,obs,devres)
