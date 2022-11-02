@@ -13,7 +13,7 @@ lr.test<-function(full.model,reduced.model){
     return(out)}}
 
 rubins.rule <- function(std.errors){
-  r.r.std.errors<-sqrt(mean(std.errors^2) + var(std.errors) + var(std.errors)/length(std.errors))
+  r.r.std.error<-sqrt(mean(std.errors^2) + var(std.errors) + var(std.errors)/length(std.errors))
   return(r.r.std.error)}
 
 
