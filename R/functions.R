@@ -12,6 +12,12 @@ lr.test<-function(full.model,reduced.model){
                       "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
     return(out)}}
 
+rubins.rule <- function(std.errors){
+  r.r.std.errors<-sqrt(mean(std.errors^2) + var(std.errors) + var(std.errors)/length(std.errors))
+  return(r.r.std.error)}
+
+
+
 diagn <- function(model){
   if(class(model)[1]=="glm"){
     pearsonres<-residuals.glm(model,type="pearson")
