@@ -96,12 +96,12 @@ list.coef<-function(model,rounded=3,alpha=.05){
   outp<-list(out=out)
   return(outp)}
 
-compare.AMEs <- function(margins.matrix,seed=1234,rounded=3,nsim=10000){
-  difference <- margins.matrix$AME[1] - margins.matrix$AME[2]
+compare.margins <- function(margins,margins.ses,seed=1234,rounded=3){
+  difference <- margins[1] - margins[2]
   if(difference>0){
-    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins.matrix$AME[1],sd=margins.matrix$SE[1]) - rnorm(nsim,mean=margins.matrix$AME[2],sd=margins.matrix$SE[2])) < 0) /nsim
+    set.seed(seed); p.value<-sum((rnorm(10000,mean=margins[1],sd=margins.ses[1]) - rnorm(10000,mean=margins[2],sd=margins.ses[2])) < 0) /10000
   }else{
-    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins.matrix$AME[1],sd=margins.matrix$SE[1]) - rnorm(nsim,mean=margins.matrix$AME[2],sd=margins.matrix$SE[2])) > 0) /nsim
+    set.seed(seed); p.value<-sum((rnorm(10000,mean=margins[1],sd=margins.ses[1]) - rnorm(10000,mean=margins[2],sd=margins.ses[2])) > 0) /10000
   }
   out <- list(difference=round(difference,rounded),p.value=round(p.value,rounded))
   return(out)
