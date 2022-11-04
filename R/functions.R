@@ -495,23 +495,46 @@ count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
   return(outp)}
 
 
-
-
 first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data){
   if (bootstrap=="no"){
     require(marginaleffects)
+    f2 <- margins.dat(mod,design.matrix[compare[1:2],])
     if(sum(class(mod)=="lm")>0){
       f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare[1],]) - predict(x, type = "response", newdata = design.matrix[compare[2],])
     }else{
       f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare[1],]) - predict(x, type = "probs", newdata = design.matrix[compare[2],])
     }
     out <- deltamethod(mod, FUN = f1)
-    colnames(out)[c(2,6:7)]<-c("est","ll","ul")
-    out[,6] <- out[,2]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,3]
-    out[,7] <- out[,2]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,3]
+    out<-out[-1]
+    colnames(out)[c(1,5:6)]<-c("first.diff","ll","ul")
+    out[,5] <- out[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
+    out[,6] <- out[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
+    out <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out)
+    out<-round(out,rounded)
 
-    out[,2:7]<-round(out[,2:7],rounded)
-  }
+    if(length(compare)>2){
+      lc<-length(compare)/2
+      coms<-seq(1,length(compare),2)
+      coms<-coms[-1]
+      for(j in 1:(lc-1)){
+        compare2<-compare[coms[j]:(coms[j]+1)]
+        f2 <- margins.dat(mod,design.matrix[compare2,])
+        if(sum(class(mod)=="lm")>0){
+          f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare2[1],]) - predict(x, type = "response", newdata = design.matrix[compare2[2],])
+        }else{
+          f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare2[1],]) - predict(x, type = "probs", newdata = design.matrix[compare2[2],])
+        }
+        out2 <- deltamethod(mod, FUN = f1)
+        out2<-out2[-1]
+        colnames(out2)[c(1,5:6)]<-c("first.diff","ll","ul")
+        out2[,5] <- out2[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
+        out2[,6] <- out2[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
+        out2 <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out2)
+        out2<-round(out2,rounded)
+        out<-rbind(out,out2)
+      }}
+
+  }#End normal theory, begin bootstrap
   if (bootstrap=="yes"){
     m8 <- as.character(mod$call)
 
@@ -655,6 +678,8 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
 
   }
   return(out)  }
+
+
 second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data){
 
   if(bootstrap=="no"){

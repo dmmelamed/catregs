@@ -1,10 +1,10 @@
 \name{first.diff.fitted}
 \alias{first.diff.fitted}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Computes the first difference in fitted values. Inference in supported via the delta method or bootstrapping.
+\title{Computes the first difference in fitted values, or a series of first differences. Inference in supported via the delta method or bootstrapping.
 }
 \description{
-first.diff.fitted computes the first difference between fitted values from a regression model.
+first.diff.fitted computes first differences between fitted values from a regression model.
 }
 \usage{
 first.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data)
@@ -12,10 +12,10 @@ first.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",n
 \arguments{
   \item{mod}{A model object. The model should be regression model for limited dependent variables, such as a logistic regression.}
   \item{design.matrix}{Design matrix of values for the independent variables in the regression model.}
-  \item{compare}{A pair of rows in the design matrix to use for computing the fitted values. The first difference between the fitted values is then computed. For example, compare=c(4,2) means to compute the difference in the fitted values between predictions for row 4 of the design matrix and row 2 of the design matrix. Only two rows may be compared at a time.}
+  \item{compare}{Pairs of rows in the design matrix to use for computing the fitted values. The first difference between the fitted values is then computed. For example, compare=c(4,2) means to compute the difference in the fitted values between predictions for row 4 of the design matrix and row 2 of the design matrix. If more than two rows are provided, the function uses them two at a time and computes multiple first differences.}
   \item{alpha}{The alpha value for confidence intervals. Default is .05.}
   \item{rounded}{The number of decimal places to round the output. The default is 3.}
-  \item{bootstrap}{By default, inference is based on the Delta Method, as implemented in the marginaleffects package. Alternatively, inference can be based upon a bootstrapped sampling distirbution. To do so, change this to "yes"}
+  \item{bootstrap}{By default, inference is based on the Delta Method, as implemented in the marginaleffects package. Alternatively, inference can be based upon a bootstrapped sampling distirbution. To do so, change this to "yes." Note that bootstrapping is only supported for one first difference at a time.}
     \item{num.sample}{num.sample is the number samples drawn to compute the sampling distibution when using bootstrapping. Default is 1,000}
   \item{prop.sample}{prop.sample is the proportion of the original sample to include in the sampling distibution samples when using bootstrapping. Default is .9}
   \item{data}{For nonparametric inference, provide the data used in the original model statement.}
@@ -26,7 +26,7 @@ first.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",n
 %%  ~~ If necessary, more details than the description above ~~
 }
 \value{
-  \item{out}{If using parametric inference (delta method): output is a dataframe including the difference in fitted values ("est"), the standard error ("std.error"), the lower limit ("ll"), and upper limit ("ul") of the confidence interval. Of course, ll and ul are based on the alpha level.
+  \item{out}{If using parametric inference (delta method): output is a dataframe including the first fitted value ("fitted1"), the second fitted value ("fitted2"), the difference in fitted values ("first.diff"), the standard error ("std.error"), the lower limit ("ll"), and upper limit ("ul") of the confidence interval. Of course, ll and ul are based on the alpha level.
   If using nonparametric inference (bootstrapping): output is a list of objects. obs.diff is the observed difference in the response or fitted values. boot.dist is the sorted bootstrapped distribution of differences in the samples. mean.boot.dist is the average of the differences in the responses or fitted values. sd.boot.dist is the standard deviation of the sampling distribution. ci.95 is the Lower and Upper limits of the confidence interval; despite it's name, the confidence interval is based upon the alpha level. model.class is just the class of the model that was used to generate the fitted values.}
 }
 \references{
