@@ -128,7 +128,7 @@ margins.des <- function(mod,ivs,excl="nonE"){
   design <- cbind(design,t(controls))
   return(design)}
 
-margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data,num.sample=1000,prop.sample=.9){
+margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data,num.sample=1000,prop.sample=.9,seed=1234){
   # Supported models include lm, glm, polr, multinom, vgam,
   # zeroinf (pscl), hurdle (pscl) and zerotrunc (countreg)
   # vgam is supported for partial proportional odds models, not models for count outcomes
@@ -266,12 +266,12 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
       p1.model<-mod$model
       p1.dist <-matrix(NA,nr=num.sample,nc=length(p1))
       for(i in 1:num.sample){
-        p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
+        set.seed(seed); p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
         p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
         p1<-predict(p1.mod,newdata=des[1,],type="response")
         if(nrow(des)>1){
           for(j in 2:nrow(des)){
-            p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
+            set.seed(seed + j); p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
             p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
             pi<-predict(p1.mod,newdata=des[j,],type="response")
             p1<-c(p1,pi)}}
@@ -344,7 +344,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
   return(marginsdat)
 }
 
-margins.dat.clogit <- function(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05){
+margins.dat.clogit <- function(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05,seed=1234){
   require(tidyverse)
   des <- mutate(design.matrix,lp=exp(as.matrix(design.matrix) %*% coef(mod)),
                 probs=lp/sum(lp))
@@ -352,7 +352,7 @@ margins.dat.clogit <- function(mod,design.matrix,run.boot="no",num.sample=1000,p
   boot.dist <- matrix(NA,nr=num.sample,nc=nrow(des))
   if(run.boot=="yes"){
     for(i in 1:num.sample){
-      mod2 <- mod$model[sample(1:nrow(mod$model),round(prop.sample*nrow(mod$model),0),replace=TRUE),]
+      set.seed(seed + i); mod2 <- mod$model[sample(1:nrow(mod$model),round(prop.sample*nrow(mod$model),0),replace=TRUE),]
       m.1 <- clogistic(mod$formula, strata=`(strata)`, data=mod2)
       design2 <- mutate(des,lp=exp(as.matrix(design) %*% coef(m.1)),
                         probs=lp/sum(lp))
@@ -495,7 +495,7 @@ count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
   return(outp)}
 
 
-first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data){
+first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234){
   if (bootstrap=="no"){
     require(marginaleffects)
     f2 <- margins.dat(mod,design.matrix[compare[1:2],])
@@ -540,11 +540,11 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
 
     if(m8[1]=="lm") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- lm(m8[2],data=dat2)
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- lm(m8[2],data=dat2)
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
         d1 <- c(d1,d2)}
@@ -561,11 +561,11 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
     if(m8[1]=="glm" & m8[3]=="binomial") {
 
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm(m8[2],data=dat2,family="binomial")
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm(m8[2],data=dat2,family="binomial")
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
         d1 <- c(d1,d2)}
@@ -580,11 +580,11 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
     }
     if (m8[1]=="glm" & m8[3]=="poisson") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm(m8[2],data=dat2,family="poisson")
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm(m8[2],data=dat2,family="poisson")
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
         d1 <- c(d1,d2)}
@@ -601,11 +601,11 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
     }
     if (m8[1]=="glm.nb") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm.nb(m8[2],data=dat2)
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm.nb(m8[2],data=dat2)
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
         d1 <- c(d1,d2)}
@@ -622,11 +622,11 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
     if (m8[1]=="polr")  {
 
       obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2<-polr(m8[2],data=dat2, Hess=TRUE)
       d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- polr(m8[2],data=dat2, Hess=TRUE)
         d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
         d1 <- rbind(d1,d2)}
@@ -648,12 +648,12 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
     }
     if (m8[1]=="multinom"){
       obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2<-multinom(m8[2],data=dat2)
 
       d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2<-multinom(m8[2],data=dat2)
         d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
         d1 <- rbind(d1,d2)}
@@ -680,7 +680,7 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
   return(out)  }
 
 
-second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data){
+second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234){
 
   if(bootstrap=="no"){
     require(marginaleffects)
@@ -704,12 +704,12 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
     if(m8[1]=="lm") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "response", newdata = design.matrix[compare[3],]) - predict(mod, type = "response", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- lm(m8[2],data=dat2)
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- lm(m8[2],data=dat2)
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
@@ -728,12 +728,12 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
 
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "response", newdata = design.matrix[compare[3],]) - predict(mod, type = "response", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm(m8[2],data=dat2,family="binomial")
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm(m8[2],data=dat2,family="binomial")
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
@@ -750,12 +750,12 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
     if (m8[1]=="glm" & m8[3]=="poisson") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "response", newdata = design.matrix[compare[3],]) - predict(mod, type = "response", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm(m8[2],data=dat2,family="poisson")
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm(m8[2],data=dat2,family="poisson")
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
@@ -774,12 +774,12 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
     if (m8[1]=="glm.nb") {
       obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "response", newdata = design.matrix[compare[3],]) - predict(mod, type = "response", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2 <- glm.nb(m8[2],data=dat2)
       d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- glm.nb(m8[2],data=dat2)
         d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "response", newdata = design.matrix[compare[3],]) - predict(mod2, type = "response", newdata = design.matrix[compare[4],]))
@@ -798,12 +798,12 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
 
       obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod, type = "probs", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2<-polr(m8[2],data=dat2, Hess=TRUE)
       d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2 <- polr(m8[2],data=dat2, Hess=TRUE)
         d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[4],]))
@@ -827,13 +827,13 @@ second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bo
     if (m8[1]=="multinom"){
       obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],])) -
         (predict(mod, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod, type = "probs", newdata = design.matrix[compare[4],]))
-      dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
       mod2<-multinom(m8[2],data=dat2)
 
       d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],])) -
         (predict(mod2, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[4],]))
       for (i in 2:num.sample){
-        dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
+        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
         mod2<-multinom(m8[2],data=dat2)
         d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],])) -
           (predict(mod2, type = "probs", newdata = design.matrix[compare[3],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[4],]))
