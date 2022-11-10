@@ -355,7 +355,7 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
   if (run.boot == "yes") {
     for (i in 1:num.sample) {
       set.seed(seed + i); mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
-                                                                              nrow(mod$model), 0), replace = TRUE), ]
+                                                                              nrow(mod$model), 0), replace = FALSE), ]
       m.1 <- clogistic(mod$formula, strata = `(strata)`,
                        data = mod2)
       coefs2 <- as.numeric(na.omit(coef(m.1)))
