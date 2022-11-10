@@ -344,25 +344,24 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
   return(marginsdat)
 }
 
-margins.dat.clogit<-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
-                               prop.sample = 0.9, alpha = 0.05, seed = 1234) {
+margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
+                                prop.sample = 0.9, alpha = 0.05, seed = 1234) {
   require(tidyverse)
-  coefs<-as.numeric(na.omit(coef(mod)))
+  coefs <- as.numeric(na.omit(coef(mod)))
   des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
                                           coefs), probs = lp/sum(lp))
   out <- des
   boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
   if (run.boot == "yes") {
     for (i in 1:num.sample) {
-      set.seed(seed + i)
-      mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
-                                                          nrow(mod$model), 0), replace = TRUE), ]
+      set.seed(seed + i); mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
+                                                                              nrow(mod$model), 0), replace = FALSE), ]
       m.1 <- clogistic(mod$formula, strata = `(strata)`,
                        data = mod2)
-      coefs2<-as.numeric(na.omit(coef(m.1)))
-      design2 <- mutate(des, lp = exp(as.matrix(design) %*%
-                                        coefs2), probs = lp/sum(lp))
-      boot.dist[i, ] <- design2[, ncol(design2)]
+      coefs2 <- as.numeric(na.omit(coef(m.1)))
+      design20 <- mutate(des, lp = exp(as.matrix(design.matrix) %*%
+                                         coefs2), probs = lp/sum(lp))
+      boot.dist[i, ] <- design20[, ncol(design20)]
     }
     boot.dist[, 1] <- sort(boot.dist[, 1])
     if (ncol(boot.dist) > 1) {
@@ -370,8 +369,10 @@ margins.dat.clogit<-function (mod, design.matrix, run.boot = "no", num.sample = 
         boot.dist[, i] <- sort(boot.dist[, i])
       }
     }
-    lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),]
-    upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),]
+    lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),
+    ]
+    upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
+    ]
     des <- mutate(des, ll = lower.limit, ul = upper.limit)
     out <- list(des = des, boot.dist = boot.dist)
   }
