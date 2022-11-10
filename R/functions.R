@@ -206,7 +206,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
       pdes$se[1] <- pdes$SE[1]
       pdes$se[nrow(pdes)]<- pdes$SE[nrow(pdes)-1]
       for(i in 2:(nrow(pdes)-1)) {
-        pdes$se[i] <- sqrt(pdes$SE[i]^2 +  pdes$SE[i]^2)
+        pdes$se[i] <- rubins.rule(c(pdes$SE[i],pdes$SE[i]))
       }
       pdes <- pdes[,-match(c("pr","SE"),colnames(pdes))]
       if (nrow(des)>1){for(i in 2:nrow(des)){
@@ -229,7 +229,7 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
         pdesi$se[1] <- pdesi$SE[1]
         pdesi$se[nrow(pdesi)]<- pdesi$SE[nrow(pdesi)-1]
         for(i in 2:(nrow(pdesi)-1)) {
-          pdesi$se[i] <- sqrt(pdesi$SE[i]^2 +  pdesi$SE[i]^2)
+          pdesi$se[i] <- rubins.rule(c(pdesi$SE[i],pdesi$SE[i]))
         }
         pdesi <- pdesi[,-match(c("pr","SE"),colnames(pdesi))]
         pdes<-rbind(pdes,pdesi)
