@@ -345,12 +345,12 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
 }
 
 margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
-                                prop.sample = 0.9, alpha = 0.05, seed = 1234) {
+                                prop.sample = 0.9, alpha = 0.05, seed = 1234,rounded=3) {
   require(tidyverse)
   coefs <- as.numeric(na.omit(coef(mod)))
   des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
                                           coefs), probs = lp/sum(lp))
-  out <- des
+  out <- round(des,rounded)
   boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
   if (run.boot == "yes") {
     for (i in 1:num.sample) {
@@ -373,7 +373,7 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
     ]
     upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
     ]
-    des <- mutate(des, ll = lower.limit, ul = upper.limit)
+    des <- round(mutate(des, ll = lower.limit, ul = upper.limit),rounded)
     out <- list(des = des, boot.dist = boot.dist)
   }
   return(out)
