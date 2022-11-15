@@ -1,13 +1,13 @@
 \name{margins.dat.clogit}
 \alias{margins.dat.clogit}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Computes predicted probabilities for conditional logistic regression models, with or without bootstrapped sampling distributions.
+\title{Computes predicted probabilities for conditional logistic regression models. Inference is based upon simulation techniques. Alternatively, bootstrapping is an option.
 }
 \description{
-Given a model object and a design matrix, this creates a data.frame of the design matrix, with predicted probabilities for each response category. Inferential information about the predict probabilities is supported with bootstrapping.
+Given a model object and a design matrix, this creates a data.frame of the design matrix, with predicted probabilities for each response category. Inferential information about the predict probabilities is supported with simulation. Bootstrapping may be added as an option.
 }
 \usage{
-margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05)}
+margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05,seed=1234,rounded=3)}
 \arguments{
   \item{mod}{A conditional logistic regression model, as estimated in the Epi package.
 }
@@ -16,6 +16,9 @@ margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.
   \item{num.sample}{num.sample is the number samples drawn to compute the sampling distibution.}
   \item{prop.sample}{prop.sample is the proportion of the original sample to include in the sampling distibution samples. Default is .9}
     \item{alpha}{The alpha value for confidence intervals. Default is .05.}
+    \item{seed}{Sets a seed so that random results are reprodicible.}
+    \item{rounded}{How many decimal places to show in the output.}
+
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
