@@ -344,52 +344,73 @@ margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data
   return(marginsdat)
 }
 
-margins.dat.clogit <-  function (mod, design.matrix, run.boot = "no", num.sample = 1000,
-                                 prop.sample = 0.9, alpha = 0.05, seed = 1234, rounded = 3) {
+margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
+                                prop.sample = 0.9, alpha = 0.05, seed = 1234, rounded = 3) {
   require(tidyverse)
   require(MASS)
-  coefs <- as.numeric(na.omit(coef(mod)))
-  des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
-                                          coefs), probs = lp/sum(lp))
-  sims <- matrix(NA,ncol=nrow(design.matrix),nrow=num.sample)
-  vcovc<-vcov(mod)
-  sl<-which(is.na(coef(mod)))
-  if(length(sl)>0){vcovc<-vcovc[-sl,-sl]}
-  for(i in 1:num.sample){
-    set.seed(seed + i); lp<-exp(as.matrix(design.matrix) %*% mvrnorm(mu=coefs,Sigma=vcovc))
-    sims[i,]<-lp/sum(lp)}
-  sims<-apply(sims,2,FUN="sort")
-  des <- mutate(des,ll=sims[alpha/2*nrow(sims),],ul=sims[(1-alpha/2)*nrow(sims),],se=apply(sims,2,FUN="sd"))
-  out <- round(des, rounded)
-  boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
-  if (run.boot == "yes") {
+  if(class(mod)=="clogistic"){
+    coefs <- as.numeric(na.omit(coef(mod)))
+    des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
+                                            coefs), probs = lp/sum(lp))
+    sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
+    vcovc <- vcov(mod)
+    sl <- which(is.na(coef(mod)))
+    if (length(sl) > 0) {
+      vcovc <- vcovc[-sl, -sl]
+    }
     for (i in 1:num.sample) {
       set.seed(seed + i)
-      mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
-                                                          nrow(mod$model), 0), replace = FALSE), ]
-      m.1 <- clogistic(mod$formula, strata = `(strata)`,
-                       data = mod2)
-      coefs2 <- as.numeric(na.omit(coef(m.1)))
-      design20 <- mutate(des, lp = exp(as.matrix(design.matrix) %*%
-                                         coefs2), probs = lp/sum(lp))
-      boot.dist[i, ] <- design20[, ncol(design20)]
+      lp <- exp(as.matrix(design.matrix) %*% mvrnorm(mu = coefs,
+                                                     Sigma = vcovc))
+      sims[i, ] <- lp/sum(lp)
     }
-    boot.dist[, 1] <- sort(boot.dist[, 1])
-    if (ncol(boot.dist) > 1) {
-      for (i in 2:ncol(boot.dist)) {
-        boot.dist[, i] <- sort(boot.dist[, i])
+    sims <- apply(sims, 2, FUN = "sort")
+    des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
+                                                                       alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
+    out <- round(des, rounded)
+    if (run.boot == "yes") {
+      boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
+      for (i in 1:num.sample) {
+        set.seed(seed + i)
+        mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
+                                                            nrow(mod$model), 0), replace = FALSE), ]
+        m.1 <- clogistic(mod$formula, strata = `(strata)`,
+                         data = mod2)
+        coefs2 <- as.numeric(na.omit(coef(m.1)))
+        design20 <- mutate(des, lp = exp(as.matrix(design.matrix) %*%
+                                           coefs2), probs = lp/sum(lp))
+        boot.dist[i, ] <- design20[, ncol(design20)]
       }
+      boot.dist[, 1] <- sort(boot.dist[, 1])
+      if (ncol(boot.dist) > 1) {
+        for (i in 2:ncol(boot.dist)) {
+          boot.dist[, i] <- sort(boot.dist[, i])
+        }
+      }
+      lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),
+      ]
+      upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
+      ]
+      des <- round(mutate(des, ll.boot = lower.limit, ul.boot = upper.limit),
+                   rounded)
+      out <- list(des = des, boot.dist = boot.dist)
     }
-    lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),
-    ]
-    upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
-    ]
-    des <- round(mutate(des, ll.boot = lower.limit, ul.boot = upper.limit),
-                 rounded)
-    out <- list(des = des, boot.dist = boot.dist)
-  }
-  return(out)
-}
+    return(out)} else if(class(mod)=="mlogit"){
+      des <- mutate(design.matrix, probs= predict(mod,newdata=design.matrix))
+      require(MASS)
+      m2 <- mod
+      sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
+      vcovc <- vcov(mod)
+      for (i in 1:num.sample) {
+        set.seed(seed + i)
+        m2$coefficients <- mvrnorm(mu = coef(mod), Sigma = vcov(mod))
+        sims[i, ] <- predict(m2,newdata=design.matrix)}
+      sims <- apply(sims, 2, FUN = "sort")
+      des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
+                                                                         alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
+      out <- round(des, rounded)
+      return(out)
+    } else{print("Model type is not supported.")}}
 
 
 # Take a Poisson model object of the count process.

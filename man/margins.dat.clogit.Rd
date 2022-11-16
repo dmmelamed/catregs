@@ -1,15 +1,15 @@
 \name{margins.dat.clogit}
 \alias{margins.dat.clogit}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Computes predicted probabilities for conditional logistic regression models. Inference is based upon simulation techniques. Alternatively, bootstrapping is an option.
+\title{Computes predicted probabilities for conditional and rank-order/exploded logistic regression models. Inference is based upon simulation techniques (requires the MASS package). Alternatively, bootstrapping is an option for conditional logistic regression models.
 }
 \description{
-Given a model object and a design matrix, this creates a data.frame of the design matrix, with predicted probabilities for each response category. Inferential information about the predict probabilities is supported with simulation. Bootstrapping may be added as an option.
+Given a model object and a design matrix, this creates a data.frame of the design matrix, with predicted probabilities for each response category. Inferential information about the predict probabilities is supported with simulation. Bootstrapping may be added as an option for conditional logistic regression models.
 }
 \usage{
 margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05,seed=1234,rounded=3)}
 \arguments{
-  \item{mod}{A conditional logistic regression model, as estimated in the Epi package.
+  \item{mod}{A conditional logistic regression model as estimated in the Epi package or an Exploded logistic regression model as estimated in the mlogit package.
 }
   \item{design.matrix}{Design matrix of values for the independent variables in the regression model. Unlike the design matrices in the margins.des function, the design matrix for a conditional logistic regression entails multiple rows, corresponding to the number of response options.}
   \item{run.boot}{Whether to compute confidence intervals around the predicted probabilities using bootstrapping. Defaul is "no."}
