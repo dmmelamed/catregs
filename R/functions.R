@@ -108,9 +108,13 @@ compare.margins <- function(margins,margins.ses,seed=1234,rounded=3,nsim=10000){
 }
 
 
-margins.des<-function (mod, ivs, excl = "nonE") {
-  if(sum(class(mod)=="nnet")>0){print("Please provide an ordinal specification to generate the design matrix. Simply change over to polr as the function. This will save the data, which this function uses to compute the means.")
-    return()}
+
+margins.des<-function (mod, ivs, excl = "nonE",data) {
+  if(sum(class(mod)=="nnet")>0){
+    c1<-as.character(mod$call)
+    require(MASS)
+    m.polr<-polr(c1[2],data=data)
+    mod<-m.polr}
   X.mod <- mod$model[, -1]
   var.names <- colnames(X.mod)
   if (excl == "nonE") {
