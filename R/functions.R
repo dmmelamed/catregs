@@ -108,239 +108,334 @@ compare.margins <- function(margins,margins.ses,seed=1234,rounded=3,nsim=10000){
 }
 
 
-margins.des <- function(mod,ivs,excl="nonE"){
-  X.mod <- mod$model[,-1]
-  var.names<-colnames(X.mod)
-  if(excl=="nonE"){
-
-  }else{
-    X.mod<- X.mod[,-match(excl,colnames(X.mod))]
-    var.names<- var.names[match(colnames(X.mod),var.names)]
+margins.des<-function (mod, ivs, excl = "nonE") {
+  if(sum(class(mod)=="nnet")>0){print("Please provide an ordinal specification to generate the design matrix. Simply change over to polr as the function. This will save the data, which this function uses to compute the means.")
+    return()}
+  X.mod <- mod$model[, -1]
+  var.names <- colnames(X.mod)
+  if (excl == "nonE") {
   }
-  X.mod <- X.mod[,-match(names(ivs),colnames(X.mod))]
-  var.names <- var.names[-match(names(ivs),var.names)]
-  if(class(X.mod)=="numeric"){
+  else {
+    X.mod <- X.mod[, -match(excl, colnames(X.mod))]
+    var.names <- var.names[match(colnames(X.mod), var.names)]
+  }
+  X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))]
+  var.names <- var.names[-match(names(ivs), var.names)]
+  if (class(X.mod) == "numeric") {
     controls <- mean(X.mod)
-    names(controls) <-var.names
-  }else{
-    controls <- apply(X.mod,2,FUN="mean")}
+    names(controls) <- var.names
+  }
+  else {
+    controls <- apply(X.mod, 2, FUN = "mean")
+  }
+
   design <- ivs
-  design <- cbind(design,t(controls))
-  return(design)}
+  design <- cbind(design, t(controls))
+  return(design)
+}
 
-margins.dat <- function(mod,des,alpha=.05,rounded=3,cumulate="no",pscl.data=data,num.sample=1000,prop.sample=.9,seed=1234){
-  # Supported models include lm, glm, polr, multinom, vgam,
-  # zeroinf (pscl), hurdle (pscl) and zerotrunc (countreg)
-  # vgam is supported for partial proportional odds models, not models for count outcomes
-  # zerotrunc is supported with bootstrapped inference, may take a while
+margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
+                          pscl.data = data, num.sample = 1000, prop.sample = 0.9, seed = 1234) {
   require(emmeans)
-  if (cumulate=="no"){
-
-    if(sum(class(mod)=="lm")>0){
-      probs<-data.frame(emmeans(mod,~1,type="response",weights="proportional",at=as.list(des[1,])))
-      if(nrow(des>1)){
-        for(i in 2:nrow(des)){
-          probsi<-data.frame(emmeans(mod,~1,type="response",weights="proportional",at=as.list(des[i,])))
-          probs <- rbind(probs,probsi)}}
-      probs<-probs[,-c(1,4)]
-      probs[,3] <- probs[,1] - qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,2]
-      probs[,4] <- probs[,1] + qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,2]
-      colnames(probs)<-c("fitted","SE","ll","ul")
-      marginsdat <- data.frame(des,probs)
-      marginsdat<-round(marginsdat,rounded)
+  if (cumulate == "no") {
+    if (sum(class(mod) == "lm") > 0) {
+      probs <- data.frame(emmeans(mod, ~1, type = "response",
+                                  weights = "proportional", at = as.list(des[1,
+                                  ])))
+      if (nrow(des > 1)) {
+        for (i in 2:nrow(des)) {
+          probsi <- data.frame(emmeans(mod, ~1, type = "response",
+                                       weights = "proportional", at = as.list(des[i,
+                                       ])))
+          probs <- rbind(probs, probsi)
+        }
+      }
+      probs <- probs[, -c(1, 4)]
+      probs[, 3] <- probs[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 2]
+      probs[, 4] <- probs[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 2]
+      colnames(probs) <- c("fitted", "SE", "ll", "ul")
+      marginsdat <- data.frame(des, probs)
+      marginsdat <- round(marginsdat, rounded)
     }
-    if(class(mod)[1] == "polr" ){
-      probs<-data.frame(emmeans(mod,~dv,at=as.list(des[1,]),weights="proportional",mode="prob"))
-      if(nrow(des)>1){
-        for(i in 2:nrow(des)){
-          probsi<-data.frame(emmeans(mod,~dv,at=as.list(des[i,]),weights="proportional",mode="prob"))
-          probs <- rbind(probs,probsi)}}
-      probs[,5] <- probs[,2] - qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      probs[,6] <- probs[,2] + qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      colnames(probs)[5:6]<-c("ll","ul")
-      probs<-probs[,-4]
-      probs[,2]<- round(probs[,2],rounded)
-      probs[,3]<-round(probs[,3],rounded)
-      probs[,4]<-round(probs[,4],rounded)
-      probs[,5]<-round(probs[,5],rounded)
-      #probs<-round(probs[,2:ncol(probs)],rounded)
-      des<-des[rep(1:nrow(des), each=length(unique(probs$dv))),]
-      des<-round(des,rounded)
-      marginsdat <- data.frame(des,probs)}
-    if(class(mod)[1] == "multinom"){
-      probs<-data.frame(emmeans(mod,~dv,at=as.list(des[1,]),weights="proportional",mode="prob"))
-      if(nrow(des)>1){
-        for(i in 2:nrow(des)){
-          probsi<-data.frame(emmeans(mod,~dv,at=as.list(des[i,]),weights="proportional",mode="prob"))
-          probs <- rbind(probs,probsi)}}
-      probs[,5] <- probs[,2] - qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      probs[,6] <- probs[,2] + qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      colnames(probs)[5:6]<-c("ll","ul")
-      probs<-probs[,-4]
-      probs[,2]<-round(probs[,2],rounded)
-      probs[,3]<-round(probs[,3],rounded)
-      probs[,4]<-round(probs[,4],rounded)
-      probs[,5]<-round(probs[,5],rounded)
-      #probs<-round(probs[,2:ncol(probs)],rounded)
-      des<-des[rep(1:nrow(des), each=length(unique(probs$dv))),]
-      des<-round(des,rounded)
-      marginsdat <- data.frame(des,probs)}
-    if(class(mod)[1] =="vglm"){
-      preds<- predict(mod,newdata=des[1,],type="link",se.fit=TRUE)
-      pdes <- des[rep(1,each=length(preds$fitted.values)+1),]
-      pdes <- round(pdes,rounded)
-      pdes <- data.frame(pdes,dv=1:(length(preds$fitted.values)+1),c(t(preds$fitted.values),NA),c(t(preds$se.fit),NA))
-      colnames(pdes)[(ncol(pdes)-1):ncol(pdes)] <- c("fitted","se")
-      pdes <- mutate(pdes,pr=plogis(fitted),
-                     ll=plogis(fitted-qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                     ul=plogis(fitted+qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                     SE=(pr - ll)/qnorm(1-(alpha/2)))
-      pdes <- pdes[,-match(c("fitted","se","ll","ul"),colnames(pdes))]
-      pdes <- mutate(pdes,prob=NA)
+    if (class(mod)[1] == "polr") {
+      probs <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[1,
+      ]), weights = "proportional", mode = "prob"))
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          probsi <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[i,
+          ]), weights = "proportional", mode = "prob"))
+          probs <- rbind(probs, probsi)
+        }
+      }
+      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      colnames(probs)[5:6] <- c("ll", "ul")
+      probs <- probs[, -4]
+      probs[, 2] <- round(probs[, 2], rounded)
+      probs[, 3] <- round(probs[, 3], rounded)
+      probs[, 4] <- round(probs[, 4], rounded)
+      probs[, 5] <- round(probs[, 5], rounded)
+      des <- des[rep(1:nrow(des), each = length(table(mod$model[,1]))),
+      ]
+      des <- round(des, rounded)
+      marginsdat <- data.frame(des, probs)
+    }
+    if (class(mod)[1] == "multinom") {
+      cl <- as.character(mod$call)[2]
+      dv<-strsplit(cl," ")[[1]][1]
+      probs <- data.frame(emmeans(mod, specs=dv, at = as.list(des[1,
+      ]), weights = "proportional", mode = "prob"))
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          probsi <- data.frame(emmeans(mod, specs=dv, at = as.list(des[i,
+          ]), weights = "proportional", mode = "prob"))
+          probs <- rbind(probs, probsi)
+        }
+      }
+      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      colnames(probs)[5:6] <- c("ll", "ul")
+      probs <- probs[, -4]
+      probs[, 2] <- round(probs[, 2], rounded)
+      probs[, 3] <- round(probs[, 3], rounded)
+      probs[, 4] <- round(probs[, 4], rounded)
+      probs[, 5] <- round(probs[, 5], rounded)
+      des <- des[rep(1:nrow(des), each = length(mod$lev)),
+      ]
+      des <- round(des, rounded)
+      marginsdat <- data.frame(des, probs)
+    }
+
+
+
+    if (class(mod)[1] == "vglm") {
+      preds <- predict(mod, newdata = des[1, ], type = "link",
+                       se.fit = TRUE)
+      pdes <- des[rep(1, each = length(preds$fitted.values) +
+                        1), ]
+      pdes <- round(pdes, rounded)
+      pdes <- data.frame(pdes, dv = 1:(length(preds$fitted.values) +
+                                         1), c(t(preds$fitted.values), NA), c(t(preds$se.fit),
+                                                                              NA))
+      colnames(pdes)[(ncol(pdes) - 1):ncol(pdes)] <- c("fitted",
+                                                       "se")
+      pdes <- mutate(pdes, pr = plogis(fitted), ll = plogis(fitted -
+                                                              qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
+                     ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                   se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
+      pdes <- pdes[, -match(c("fitted", "se", "ll", "ul"),
+                            colnames(pdes))]
+      pdes <- mutate(pdes, prob = NA)
       pdes$prob[1] <- pdes$pr[1]
-      pdes$prob[nrow(pdes)]<- 1 - pdes$pr[nrow(pdes)-1]
-      for(i in 2:(nrow(pdes)-1)) {
-        pdes$prob[i] <- pdes$pr[i] - pdes$pr[i-1]
+      pdes$prob[nrow(pdes)] <- 1 - pdes$pr[nrow(pdes) -
+                                             1]
+      for (i in 2:(nrow(pdes) - 1)) {
+        pdes$prob[i] <- pdes$pr[i] - pdes$pr[i - 1]
       }
-      pdes <- mutate(pdes,se=NA)
+      pdes <- mutate(pdes, se = NA)
       pdes$se[1] <- pdes$SE[1]
-      pdes$se[nrow(pdes)]<- pdes$SE[nrow(pdes)-1]
-      for(i in 2:(nrow(pdes)-1)) {
-        pdes$se[i] <- rubins.rule(c(pdes$SE[i],pdes$SE[i]))
+      pdes$se[nrow(pdes)] <- pdes$SE[nrow(pdes) - 1]
+      for (i in 2:(nrow(pdes) - 1)) {
+        pdes$se[i] <- rubins.rule(c(pdes$SE[i], pdes$SE[i]))
       }
-      pdes <- pdes[,-match(c("pr","SE"),colnames(pdes))]
-      if (nrow(des)>1){for(i in 2:nrow(des)){
-        predsi<- predict(mod,newdata=des[i,],type="link",se.fit=TRUE)
-        pdesi <- des[rep(i,each=length(predsi$fitted.values)+1),]
-        pdesi <- data.frame(pdesi,dv=1:(length(predsi$fitted.values)+1),c(t(predsi$fitted.values),NA),c(t(predsi$se.fit),NA))
-        colnames(pdesi)[(ncol(pdesi)-1):ncol(pdesi)] <- c("fitted","se")
-        pdesi <- mutate(pdesi,pr=plogis(fitted),
-                        ll=plogis(fitted-qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                        ul=plogis(fitted+qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                        SE=(pr - ll)/qnorm(1-(alpha/2)))
-        pdesi <- pdesi[,-match(c("fitted","se","ll","ul"),colnames(pdesi))]
-        pdesi <- mutate(pdesi,prob=NA)
-        pdesi$prob[1] <- pdesi$pr[1]
-        pdesi$prob[nrow(pdesi)]<- 1 - pdesi$pr[nrow(pdesi)-1]
-        for(i in 2:(nrow(pdesi)-1)) {
-          pdesi$prob[i] <- pdesi$pr[i] - pdesi$pr[i-1]
+      pdes <- pdes[, -match(c("pr", "SE"), colnames(pdes))]
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          predsi <- predict(mod, newdata = des[i, ],
+                            type = "link", se.fit = TRUE)
+          pdesi <- des[rep(i, each = length(predsi$fitted.values) +
+                             1), ]
+          pdesi <- data.frame(pdesi, dv = 1:(length(predsi$fitted.values) +
+                                               1), c(t(predsi$fitted.values), NA), c(t(predsi$se.fit),
+                                                                                     NA))
+          colnames(pdesi)[(ncol(pdesi) - 1):ncol(pdesi)] <- c("fitted",
+                                                              "se")
+          pdesi <- mutate(pdesi, pr = plogis(fitted),
+                          ll = plogis(fitted - qnorm(1 - (alpha/2),
+                                                     lower.tail = TRUE) * se), ul = plogis(fitted +
+                                                                                             qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                                                                             se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
+          pdesi <- pdesi[, -match(c("fitted", "se", "ll",
+                                    "ul"), colnames(pdesi))]
+          pdesi <- mutate(pdesi, prob = NA)
+          pdesi$prob[1] <- pdesi$pr[1]
+          pdesi$prob[nrow(pdesi)] <- 1 - pdesi$pr[nrow(pdesi) -
+                                                    1]
+          for (i in 2:(nrow(pdesi) - 1)) {
+            pdesi$prob[i] <- pdesi$pr[i] - pdesi$pr[i -
+                                                      1]
+          }
+          pdesi <- mutate(pdesi, se = NA)
+          pdesi$se[1] <- pdesi$SE[1]
+          pdesi$se[nrow(pdesi)] <- pdesi$SE[nrow(pdesi) -
+                                              1]
+          for (i in 2:(nrow(pdesi) - 1)) {
+            pdesi$se[i] <- rubins.rule(c(pdesi$SE[i],
+                                         pdesi$SE[i]))
+          }
+          pdesi <- pdesi[, -match(c("pr", "SE"), colnames(pdesi))]
+          pdes <- rbind(pdes, pdesi)
         }
-        pdesi <- mutate(pdesi,se=NA)
-        pdesi$se[1] <- pdesi$SE[1]
-        pdesi$se[nrow(pdesi)]<- pdesi$SE[nrow(pdesi)-1]
-        for(i in 2:(nrow(pdesi)-1)) {
-          pdesi$se[i] <- rubins.rule(c(pdesi$SE[i],pdesi$SE[i]))
-        }
-        pdesi <- pdesi[,-match(c("pr","SE"),colnames(pdesi))]
-        pdes<-rbind(pdes,pdesi)
-      }}
-      pdes <- mutate(pdes,ll=prob-qnorm(1-(alpha/2),lower.tail=TRUE)*se,
-                     ul=prob+qnorm(1-(alpha/2),lower.tail=TRUE)*se)
-      pdes<-mutate(pdes,prob=round(prob,rounded),
-                   se=round(se,rounded),
-                   ll=round(ll,rounded),
-                   ul=round(ul,rounded))
-      marginsdat<-pdes
+      }
+      pdes <- mutate(pdes, ll = prob - qnorm(1 - (alpha/2),
+                                             lower.tail = TRUE) * se, ul = prob + qnorm(1 -
+                                                                                          (alpha/2), lower.tail = TRUE) * se)
+      pdes <- mutate(pdes, prob = round(prob, rounded),
+                     se = round(se, rounded), ll = round(ll, rounded),
+                     ul = round(ul, rounded))
+      marginsdat <- pdes
     }
-    if(class(mod)[1] =="zeroinfl"){
-      p1<-data.frame(emmeans(mod,~1,at=as.list(des[1,]),mode="count",data=pscl.data))
-      if(nrow(des)>1){
-        for(i in 2:nrow(des)){
-          pi<-data.frame(emmeans(mod,~1,at=as.list(des[i,]),mode="count",data=pscl.data))
-          p1 <- rbind(p1,pi)}}
-      p1 <- p1[,c(2,3)]
+    if (class(mod)[1] == "zeroinfl") {
+      p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
+      ]), mode = "count", data = pscl.data))
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
+          ]), mode = "count", data = pscl.data))
+          p1 <- rbind(p1, pi)
+        }
+      }
+      p1 <- p1[, c(2, 3)]
       colnames(p1)[1] <- "fitted"
-      marginsdat<-cbind(des,p1)
-      marginsdat<- mutate(marginsdat,ll=fitted-qnorm(1-(alpha/2),lower.tail=TRUE)*SE,
-                          ul=fitted+qnorm(1-(alpha/2),lower.tail=TRUE)*SE)
-      marginsdat<-round(marginsdat,rounded)
+      marginsdat <- cbind(des, p1)
+      marginsdat <- mutate(marginsdat, ll = fitted - qnorm(1 -
+                                                             (alpha/2), lower.tail = TRUE) * SE, ul = fitted +
+                             qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
+      marginsdat <- round(marginsdat, rounded)
     }
-    if(class(mod)[1]=="zerotrunc"){
-      p1<-predict(mod,newdata=des[1,],type="response")
-      if(nrow(des)>1){
-        for(i in 2:nrow(des)){
-          pi<-predict(mod,newdata=des[i,],type="response")
-          p1<-c(p1,pi)}}
+    if (class(mod)[1] == "zerotrunc") {
+      p1 <- predict(mod, newdata = des[1, ], type = "response")
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          pi <- predict(mod, newdata = des[i, ], type = "response")
+          p1 <- c(p1, pi)
+        }
+      }
       fits <- p1
-      # Boot sampling dist
-      p1.model<-mod$model
-      p1.dist <-matrix(NA,nr=num.sample,nc=length(p1))
-      for(i in 1:num.sample){
-        set.seed(seed); p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
-        p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
-        p1<-predict(p1.mod,newdata=des[1,],type="response")
-        if(nrow(des)>1){
-          for(j in 2:nrow(des)){
-            set.seed(seed + j); p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
-            p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
-            pi<-predict(p1.mod,newdata=des[j,],type="response")
-            p1<-c(p1,pi)}}
-        p1.dist[i,]<-p1}
-      p1.dist[,1]<-sort(p1.dist[,1])
-      if(ncol(p1.dist)>1){for(i in 2:ncol(p1.dist)){
-        p1.dist[,i]<-sort(p1.dist[,i])}}
-      se <- apply(p1.dist,2,FUN="sd")
-      marginsdat<-data.frame(round(des,rounded),fitted=round(fits,rounded),
-                             se=round(se,rounded),
-                             ll=round(p1.dist[nrow(p1.dist)*(alpha/2),],rounded),
-                             ul=round(p1.dist[nrow(p1.dist)*(1-(alpha/2)),],rounded))
+      p1.model <- mod$model
+      p1.dist <- matrix(NA, nr = num.sample, nc = length(p1))
+      for (i in 1:num.sample) {
+        set.seed(seed)
+        p1.model2 <- p1.model[sample(1:nrow(p1.model),
+                                     round(prop.sample * nrow(p1.model), 0), replace = TRUE),
+        ]
+        p1.mod <- zerotrunc(mod$formula, data = p1.model2,
+                            dist = mod$dist)
+        p1 <- predict(p1.mod, newdata = des[1, ], type = "response")
+        if (nrow(des) > 1) {
+          for (j in 2:nrow(des)) {
+            set.seed(seed + j)
+            p1.model2 <- p1.model[sample(1:nrow(p1.model),
+                                         round(prop.sample * nrow(p1.model), 0),
+                                         replace = TRUE), ]
+            p1.mod <- zerotrunc(mod$formula, data = p1.model2,
+                                dist = mod$dist)
+            pi <- predict(p1.mod, newdata = des[j, ],
+                          type = "response")
+            p1 <- c(p1, pi)
+          }
+        }
+        p1.dist[i, ] <- p1
+      }
+      p1.dist[, 1] <- sort(p1.dist[, 1])
+      if (ncol(p1.dist) > 1) {
+        for (i in 2:ncol(p1.dist)) {
+          p1.dist[, i] <- sort(p1.dist[, i])
+        }
+      }
+      se <- apply(p1.dist, 2, FUN = "sd")
+      marginsdat <- data.frame(round(des, rounded), fitted = round(fits,
+                                                                   rounded), se = round(se, rounded), ll = round(p1.dist[nrow(p1.dist) *
+                                                                                                                           (alpha/2), ], rounded), ul = round(p1.dist[nrow(p1.dist) *
+                                                                                                                                                                        (1 - (alpha/2)), ], rounded))
     }
-    if(class(mod)[1]=="hurdle"){
-      p1<-data.frame(emmeans(mod,~1,at=as.list(des[1,]),mode="response"))[2:3]
-      if(nrow(des>1)){for(i in 2:nrow(des)){
-        pi<-data.frame(emmeans(mod,~1,at=as.list(des[i,]),mode="response"))[2:3]
-        p1<-rbind(p1,pi)}}
-      ll <- p1$emmean - qnorm(1-(alpha/2),lower.tail=TRUE)*p1$SE
-      ul <- p1$emmean + qnorm(1-(alpha/2),lower.tail=TRUE)*p1$SE
-      marginsdat<-data.frame(round(des,rounded),fitted=round(p1$emmean,rounded),
-                             se=round(p1$SE,rounded),
-                             ll=round(ll,rounded),
-                             ul=round(ul,rounded))
+    if (class(mod)[1] == "hurdle") {
+      p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
+      ]), mode = "response"))[2:3]
+      if (nrow(des > 1)) {
+        for (i in 2:nrow(des)) {
+          pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
+          ]), mode = "response"))[2:3]
+          p1 <- rbind(p1, pi)
+        }
+      }
+      ll <- p1$emmean - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        p1$SE
+      ul <- p1$emmean + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        p1$SE
+      marginsdat <- data.frame(round(des, rounded), fitted = round(p1$emmean,
+                                                                   rounded), se = round(p1$SE, rounded), ll = round(ll,
+                                                                                                                    rounded), ul = round(ul, rounded))
     }
-
-  }else{ # cumulative probabilities
-    if(class(mod)=="polr"){
-      probs<-data.frame(emmeans(mod,~cut,at=as.list(des[1,]),weights="proportional",mode="cum.prob"))
-      if(nrow(des)>1){
-        for(i in 2:nrow(des)){
-          probsi<-data.frame(emmeans(mod,~cut,at=as.list(des[i,]),weights="proportional",mode="cum.prob"))
-          probs <- rbind(probs,probsi)}}
-      probs[,5] <- probs[,2] - qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      probs[,6] <- probs[,2] + qnorm(1-(alpha/2),lower.tail=TRUE)*probs[,3]
-      colnames(probs)[5:6]<-c("ll","ul")
-      probs<-probs[,-4]
-      probs[,2]<-round(probs[,2],rounded)
-      probs[,3]<-round(probs[,3],rounded)
-      probs[,4]<-round(probs[,4],rounded)
-      probs[,5]<-round(probs[,5],rounded)
-      des<-des[rep(1:nrow(des), each=length(table(mod$model[,1]))-1),]
-      des<-round(des,rounded)
-      marginsdat <- data.frame(des,probs)}
-    if(class(mod)=="vglm"){
-      preds<- predict(mod,newdata=des[1,],type="link",se.fit=TRUE)
-      pdes <- des[rep(1,each=length(preds$fitted.values)),]
-      pdes <- round(pdes,rounded)
-      pdes <- data.frame(pdes,colnames(preds$fitted.values),t(preds$fitted.values),t(preds$se.fit))
-      colnames(pdes)[(ncol(pdes)-2):ncol(pdes)] <- c("dv","fitted","se")
-      if(nrow(des)>1){for(i in 2:nrow(des)){
-        predsi<- predict(mod,newdata=des[i,],type="link",se.fit=TRUE)
-        pdesi <- des[rep(i,each=length(predsi$fitted.values)),]
-        pdesi <- round(pdesi,rounded)
-        pdesi <- data.frame(pdesi,colnames(preds$fitted.values),t(predsi$fitted.values),t(predsi$se.fit))
-        colnames(pdesi)[(ncol(pdesi)-2):ncol(pdesi)] <- c("dv","fitted","se")
-        pdes <- rbind(pdes,pdesi)}}
-      pdes <- mutate(pdes,prob=plogis(fitted),
-                     ll=plogis(fitted-qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                     ul=plogis(fitted+qnorm(1-(alpha/2),lower.tail=TRUE)*se),
-                     SE=(prob - ll)/qnorm(1-(alpha/2)))
-      pdes <- pdes[,-match(c("fitted","se"),colnames(pdes))]
-      pdes<-mutate(pdes,prob=round(prob,rounded),
-                   SE=round(SE,rounded),
-                   ll=round(ll,rounded),
-                   ul=round(ul,rounded))
-      marginsdat<-pdes}
-  } # end cumulative probabilities
-  colnames(marginsdat)[match("SE",colnames(marginsdat))] <- "se"
+  }
+  else {
+    if (class(mod) == "polr") {
+      probs <- data.frame(emmeans(mod, ~cut, at = as.list(des[1,
+      ]), weights = "proportional", mode = "cum.prob"))
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          probsi <- data.frame(emmeans(mod, ~cut, at = as.list(des[i,
+          ]), weights = "proportional", mode = "cum.prob"))
+          probs <- rbind(probs, probsi)
+        }
+      }
+      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        probs[, 3]
+      colnames(probs)[5:6] <- c("ll", "ul")
+      probs <- probs[, -4]
+      probs[, 2] <- round(probs[, 2], rounded)
+      probs[, 3] <- round(probs[, 3], rounded)
+      probs[, 4] <- round(probs[, 4], rounded)
+      probs[, 5] <- round(probs[, 5], rounded)
+      des <- des[rep(1:nrow(des), each = length(table(mod$model[,
+                                                                1])) - 1), ]
+      des <- round(des, rounded)
+      marginsdat <- data.frame(des, probs)
+    }
+    if (class(mod) == "vglm") {
+      preds <- predict(mod, newdata = des[1, ], type = "link",
+                       se.fit = TRUE)
+      pdes <- des[rep(1, each = length(preds$fitted.values)),
+      ]
+      pdes <- round(pdes, rounded)
+      pdes <- data.frame(pdes, colnames(preds$fitted.values),
+                         t(preds$fitted.values), t(preds$se.fit))
+      colnames(pdes)[(ncol(pdes) - 2):ncol(pdes)] <- c("dv",
+                                                       "fitted", "se")
+      if (nrow(des) > 1) {
+        for (i in 2:nrow(des)) {
+          predsi <- predict(mod, newdata = des[i, ],
+                            type = "link", se.fit = TRUE)
+          pdesi <- des[rep(i, each = length(predsi$fitted.values)),
+          ]
+          pdesi <- round(pdesi, rounded)
+          pdesi <- data.frame(pdesi, colnames(preds$fitted.values),
+                              t(predsi$fitted.values), t(predsi$se.fit))
+          colnames(pdesi)[(ncol(pdesi) - 2):ncol(pdesi)] <- c("dv",
+                                                              "fitted", "se")
+          pdes <- rbind(pdes, pdesi)
+        }
+      }
+      pdes <- mutate(pdes, prob = plogis(fitted), ll = plogis(fitted -
+                                                                qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
+                     ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                   se), SE = (prob - ll)/qnorm(1 - (alpha/2)))
+      pdes <- pdes[, -match(c("fitted", "se"), colnames(pdes))]
+      pdes <- mutate(pdes, prob = round(prob, rounded),
+                     SE = round(SE, rounded), ll = round(ll, rounded),
+                     ul = round(ul, rounded))
+      marginsdat <- pdes
+    }
+  }
+  colnames(marginsdat)[match("SE", colnames(marginsdat))] <- "se"
   return(marginsdat)
 }
 
