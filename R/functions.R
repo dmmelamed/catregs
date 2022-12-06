@@ -69,7 +69,7 @@ diagn <- function(model){
 
 list.coef<-function(model,rounded=3,alpha=.05){
   out<-matrix(0,nr=length(coef(model)),nc=10)
-  out[,1]<-coef(model)
+  if(class(model)[1]=="multinom"){ out[,1]<-t(coef(model))}else{out[,1]<-coef(model)}
   vcov1<-vcov(model)[1:length(coef(model)),1:length(coef(model))]
   out[,2]<-sqrt(diag(vcov1))
   out[,3]<-out[,1]/out[,2]
