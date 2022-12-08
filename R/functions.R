@@ -634,197 +634,307 @@ count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
   return(outp)}
 
 
-first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234){
-  if (bootstrap=="no"){
+first.diff.fitted <-function (mod, design.matrix, compare, alpha = 0.05, rounded = 3,
+                              bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
+                              seed = 1234) {
+  if (bootstrap == "no") {
     require(marginaleffects)
-    des1<-design.matrix[compare[1:2],]
-    f2 <- margins.dat(mod,design.matrix[compare[1:2],])
-    if(sum(class(mod)=="lm")>0){
-      f1 <- function(x) predict(x, type = "response", newdata = des1[1,]) - predict(x, type = "response", newdata = des1[2,])
-    }else{
-      f1 <- function(x) predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])
+    des1 <- design.matrix[compare[1:2], ]
+    f2 <- margins.dat(mod, design.matrix[compare[1:2], ])
+    if (sum(class(mod) == "lm") > 0) {
+      f1 <- function(x) predict(x, type = "response", newdata = des1[1,
+      ]) - predict(x, type = "response", newdata = des1[2,
+      ])
+    }
+    else {
+      f1 <- function(x) predict(x, type = "probs", newdata = des1[1,
+      ]) - predict(x, type = "probs", newdata = des1[2,
+      ])
     }
     out <- deltamethod(mod, FUN = f1)
-    out<-out[-1]
-    colnames(out)[c(1,5:6)]<-c("first.diff","ll","ul")
-    out[,5] <- out[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
-    out[,6] <- out[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
-    #out <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out)
-    out<-round(out,rounded)
-    if(sum(class(mod)=="nnet")==1){
-      out <- cbind(out,f2[nrow(design.matrix)/2,ncol(design.matrix) + 1])
-      colnames(out)[ncol(out)]<-"dv"}
-
-    if(length(compare)>2){
-      lc<-length(compare)/2
-      coms<-seq(1,length(compare),2)
-      coms<-coms[-1]
-      for(j in 1:(lc-1)){
-        compare2<-compare[coms[j]:(coms[j]+1)]
-        f2 <- margins.dat(mod,design.matrix[compare2,])
-        if(sum(class(mod)=="lm")>0){
-          f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare2[1],]) - predict(x, type = "response", newdata = design.matrix[compare2[2],])
-        }else{
-          f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare2[1],]) - predict(x, type = "probs", newdata = design.matrix[compare2[2],])
+    out <- out[-1]
+    colnames(out)[c(1, 5:6)] <- c("first.diff", "ll", "ul")
+    out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+      out[, 2]
+    out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+      out[, 2]
+    out <- round(out, rounded)
+    if (sum(class(mod) == "nnet") == 1) {
+      out <- cbind(out, levels(f2[nrow(design.matrix)/2, ncol(design.matrix) +
+                                    1]))
+      colnames(out)[ncol(out)] <- "dv"
+    }
+    if (length(compare) > 2) {
+      lc <- length(compare)/2
+      coms <- seq(1, length(compare), 2)
+      coms <- coms[-1]
+      for (j in 1:(lc - 1)) {
+        compare2 <- compare[coms[j]:(coms[j] + 1)]
+        f2 <- margins.dat(mod, design.matrix[compare2,
+        ])
+        if (sum(class(mod) == "lm") > 0) {
+          f1 <- function(x) predict(x, type = "response",
+                                    newdata = design.matrix[compare2[1], ]) -
+            predict(x, type = "response", newdata = design.matrix[compare2[2],
+            ])
+        }
+        else {
+          f1 <- function(x) predict(x, type = "probs",
+                                    newdata = design.matrix[compare2[1], ]) -
+            predict(x, type = "probs", newdata = design.matrix[compare2[2],
+            ])
         }
         out2 <- deltamethod(mod, FUN = f1)
-        out2<-out2[-1]
-        colnames(out2)[c(1,5:6)]<-c("first.diff","ll","ul")
-        out2[,5] <- out2[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
-        out2[,6] <- out2[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
-        #out2 <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out2)
-        out2<-round(out2,rounded)
-        if(sum(class(mod)=="nnet")==1){
-          out2 <- cbind(out2,f2[nrow(design.matrix)/2,ncol(design.matrix) + 1])
-          colnames(out2)[ncol(out2)]<-"dv"}
-
-        out<-rbind(out,out2)
-      }}
-
-  }#End normal theory, begin bootstrap
-  if (bootstrap=="yes"){
-    m8 <- as.character(mod$call)
-
-    if(m8[1]=="lm") {
-      obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2 <- lm(m8[2],data=dat2)
-      d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2 <- lm(m8[2],data=dat2)
-        d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-        d1 <- c(d1,d2)}
-
-      boot.dist <- sort(d1)
-      mean.boot.dist <- mean(boot.dist)
-      sd.boot.dist <- sd(boot.dist)
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample)]
-      names(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class="OLS"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,ci.95=ci.95,model.class=model.class)
-    }
-
-    if(m8[1]=="glm" & m8[3]=="binomial") {
-
-      obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2 <- glm(m8[2],data=dat2,family="binomial")
-      d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2 <- glm(m8[2],data=dat2,family="binomial")
-        d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-        d1 <- c(d1,d2)}
-
-      boot.dist <- sort(d1)
-      mean.boot.dist <- mean(boot.dist)
-      sd.boot.dist <- sd(boot.dist)
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample)]
-      names(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class="logit"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,ci.95=ci.95,model.class=model.class)
-    }
-    if (m8[1]=="glm" & m8[3]=="poisson") {
-      obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2 <- glm(m8[2],data=dat2,family="poisson")
-      d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2 <- glm(m8[2],data=dat2,family="poisson")
-        d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-        d1 <- c(d1,d2)}
-
-      boot.dist <- sort(d1)
-      mean.boot.dist <- mean(boot.dist)
-      sd.boot.dist <- sd(boot.dist)
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample)]
-      names(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class <- "Poisson"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,
-                ci.95=ci.95,model.class=model.class)
-
-    }
-    if (m8[1]=="glm.nb") {
-      obs.diff <- as.numeric(predict(mod, type = "response", newdata = design.matrix[compare[1],]) - predict(mod, type = "response", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2 <- glm.nb(m8[2],data=dat2)
-      d1<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2 <- glm.nb(m8[2],data=dat2)
-        d2<- as.numeric(predict(mod2, type = "response", newdata = design.matrix[compare[1],]) - predict(mod2, type = "response", newdata = design.matrix[compare[2],]))
-        d1 <- c(d1,d2)}
-
-      boot.dist <- sort(d1)
-      mean.boot.dist <- mean(boot.dist)
-      sd.boot.dist <- sd(boot.dist)
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample)]
-      names(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class<-"negative binomial"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,
-                ci.95=ci.95,model.class=model.class)
-    }
-    if (m8[1]=="polr")  {
-
-      obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2<-polr(m8[2],data=dat2, Hess=TRUE)
-      d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2 <- polr(m8[2],data=dat2, Hess=TRUE)
-        d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
-        d1 <- rbind(d1,d2)}
-      boot.dist <- d1
-      boot.dist[,1] <- sort(boot.dist[,1])
-      for(i in 2:ncol(boot.dist)){
-        boot.dist[,i] <- sort(boot.dist[,i])
+        out2 <- out2[-1]
+        colnames(out2)[c(1, 5:6)] <- c("first.diff",
+                                       "ll", "ul")
+        out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
+                                       lower.tail = TRUE) * out2[, 2]
+        out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
+                                       lower.tail = TRUE) * out2[, 2]
+        out2 <- round(out2, rounded)
+        if (sum(class(mod) == "nnet") == 1) {
+          out2 <- cbind(out2, levels(f2[nrow(design.matrix)/2,
+                                        ncol(design.matrix) + 1]))
+          colnames(out2)[ncol(out2)] <- "dv"
+        }
+        out <- rbind(out, out2)
       }
-      mean.boot.dist <- apply(boot.dist,2,FUN="mean")
-      sd.boot.dist <- apply(boot.dist,2,FUN="sd")
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample),1]
-      for(i in 2:ncol(boot.dist)){
-        ci.952 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample),i]
-        ci.95<- rbind(ci.95,ci.952)}
-      colnames(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class <- "ordered logit"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,
-                ci.95=ci.95,model.class=model.class)
     }
-    if (m8[1]=="multinom"){
-      obs.diff <- as.numeric(predict(mod, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod, type = "probs", newdata = design.matrix[compare[2],]))
-      set.seed(seed); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-      mod2<-multinom(m8[2],data=dat2)
-
-      d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
-      for (i in 2:num.sample){
-        set.seed(seed + i); dat2 <- data[sample(1:nrow(data),round(prop.sample*nrow(data),0),replace=TRUE),]
-        mod2<-multinom(m8[2],data=dat2)
-        d2 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],]))
-        d1 <- rbind(d1,d2)}
-      boot.dist <- d1
-      boot.dist[,1] <- sort(boot.dist[,1])
-      for(i in 2:ncol(boot.dist)){
-        boot.dist[,i] <- sort(boot.dist[,i])
-      }
-      mean.boot.dist <- apply(boot.dist,2,FUN="mean")
-      sd.boot.dist <- apply(boot.dist,2,FUN="sd")
-      ci.95 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample),1]
-      for(i in 2:ncol(boot.dist)){
-        ci.952 <- boot.dist[c((alpha/2)*num.sample,(1-alpha/2)*num.sample),i]
-        ci.95<- rbind(ci.95,ci.952)}
-      colnames(ci.95) <- c("Lower Limit","Upper Limit")
-      model.class <- "multinomial"
-      out<-list(obs.diff=obs.diff,boot.dist=boot.dist,mean.boot.dist=mean.boot.dist,sd.boot.dist=sd.boot.dist,
-                ci.95=ci.95,model.class=model.class)
-
-    }
-
-
   }
-  return(out)  }
+  if (bootstrap == "yes") {
+    m8 <- as.character(mod$call)
+    if (m8[1] == "lm") {
+      obs.diff <- as.numeric(predict(mod, type = "response",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "response", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- lm(m8[2], data = dat2)
+      d1 <- as.numeric(predict(mod2, type = "response",
+                               newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                type = "response", newdata = design.matrix[compare[2],
+                                                                                ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- lm(m8[2], data = dat2)
+        d2 <- as.numeric(predict(mod2, type = "response",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "response", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- c(d1, d2)
+      }
+      boot.dist <- sort(d1)
+      mean.boot.dist <- mean(boot.dist)
+      sd.boot.dist <- sd(boot.dist)
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample)]
+      names(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class = "OLS"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+    if (m8[1] == "glm" & m8[3] == "binomial") {
+      obs.diff <- as.numeric(predict(mod, type = "response",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "response", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- glm(m8[2], data = dat2, family = "binomial")
+      d1 <- as.numeric(predict(mod2, type = "response",
+                               newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                type = "response", newdata = design.matrix[compare[2],
+                                                                                ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- glm(m8[2], data = dat2, family = "binomial")
+        d2 <- as.numeric(predict(mod2, type = "response",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "response", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- c(d1, d2)
+      }
+      boot.dist <- sort(d1)
+      mean.boot.dist <- mean(boot.dist)
+      sd.boot.dist <- sd(boot.dist)
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample)]
+      names(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class = "logit"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+    if (m8[1] == "glm" & m8[3] == "poisson") {
+      obs.diff <- as.numeric(predict(mod, type = "response",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "response", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- glm(m8[2], data = dat2, family = "poisson")
+      d1 <- as.numeric(predict(mod2, type = "response",
+                               newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                type = "response", newdata = design.matrix[compare[2],
+                                                                                ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- glm(m8[2], data = dat2, family = "poisson")
+        d2 <- as.numeric(predict(mod2, type = "response",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "response", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- c(d1, d2)
+      }
+      boot.dist <- sort(d1)
+      mean.boot.dist <- mean(boot.dist)
+      sd.boot.dist <- sd(boot.dist)
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample)]
+      names(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class <- "Poisson"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+    if (m8[1] == "glm.nb") {
+      obs.diff <- as.numeric(predict(mod, type = "response",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "response", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- glm.nb(m8[2], data = dat2)
+      d1 <- as.numeric(predict(mod2, type = "response",
+                               newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                type = "response", newdata = design.matrix[compare[2],
+                                                                                ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- glm.nb(m8[2], data = dat2)
+        d2 <- as.numeric(predict(mod2, type = "response",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "response", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- c(d1, d2)
+      }
+      boot.dist <- sort(d1)
+      mean.boot.dist <- mean(boot.dist)
+      sd.boot.dist <- sd(boot.dist)
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample)]
+      names(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class <- "negative binomial"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+    if (m8[1] == "polr") {
+      obs.diff <- as.numeric(predict(mod, type = "probs",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "probs", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- polr(m8[2], data = dat2, Hess = TRUE)
+      d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],
+      ]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],
+      ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- polr(m8[2], data = dat2, Hess = TRUE)
+        d2 <- as.numeric(predict(mod2, type = "probs",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "probs", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- rbind(d1, d2)
+      }
+      boot.dist <- d1
+      boot.dist[, 1] <- sort(boot.dist[, 1])
+      for (i in 2:ncol(boot.dist)) {
+        boot.dist[, i] <- sort(boot.dist[, i])
+      }
+      mean.boot.dist <- apply(boot.dist, 2, FUN = "mean")
+      sd.boot.dist <- apply(boot.dist, 2, FUN = "sd")
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample), 1]
+      for (i in 2:ncol(boot.dist)) {
+        ci.952 <- boot.dist[c((alpha/2) * num.sample,
+                              (1 - alpha/2) * num.sample), i]
+        ci.95 <- rbind(ci.95, ci.952)
+      }
+      colnames(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class <- "ordered logit"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+    if (m8[1] == "multinom") {
+      obs.diff <- as.numeric(predict(mod, type = "probs",
+                                     newdata = design.matrix[compare[1], ]) - predict(mod,
+                                                                                      type = "probs", newdata = design.matrix[compare[2],
+                                                                                      ]))
+      set.seed(seed)
+      dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                nrow(data), 0), replace = TRUE), ]
+      mod2 <- multinom(m8[2], data = dat2)
+      d1 <- as.numeric(predict(mod2, type = "probs", newdata = design.matrix[compare[1],
+      ]) - predict(mod2, type = "probs", newdata = design.matrix[compare[2],
+      ]))
+      for (i in 2:num.sample) {
+        set.seed(seed + i)
+        dat2 <- data[sample(1:nrow(data), round(prop.sample *
+                                                  nrow(data), 0), replace = TRUE), ]
+        mod2 <- multinom(m8[2], data = dat2)
+        d2 <- as.numeric(predict(mod2, type = "probs",
+                                 newdata = design.matrix[compare[1], ]) - predict(mod2,
+                                                                                  type = "probs", newdata = design.matrix[compare[2],
+                                                                                  ]))
+        d1 <- rbind(d1, d2)
+      }
+      boot.dist <- d1
+      boot.dist[, 1] <- sort(boot.dist[, 1])
+      for (i in 2:ncol(boot.dist)) {
+        boot.dist[, i] <- sort(boot.dist[, i])
+      }
+      mean.boot.dist <- apply(boot.dist, 2, FUN = "mean")
+      sd.boot.dist <- apply(boot.dist, 2, FUN = "sd")
+      ci.95 <- boot.dist[c((alpha/2) * num.sample, (1 -
+                                                      alpha/2) * num.sample), 1]
+      for (i in 2:ncol(boot.dist)) {
+        ci.952 <- boot.dist[c((alpha/2) * num.sample,
+                              (1 - alpha/2) * num.sample), i]
+        ci.95 <- rbind(ci.95, ci.952)
+      }
+      colnames(ci.95) <- c("Lower Limit", "Upper Limit")
+      model.class <- "multinomial"
+      out <- list(obs.diff = obs.diff, boot.dist = boot.dist,
+                  mean.boot.dist = mean.boot.dist, sd.boot.dist = sd.boot.dist,
+                  ci.95 = ci.95, model.class = model.class)
+    }
+  }
+  return(out)
+}
+
+
 
 
 second.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234){
