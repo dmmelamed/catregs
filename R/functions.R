@@ -76,7 +76,7 @@ list.coef<-function(model,rounded=3,alpha=.05){
   out[,4] <- out[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
   out[,5] <- out[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
   out[,6]<-dnorm(out[,3])
-  out[,7]<-exp(coef(model))
+  if(class(model)[1]=="multinom"){ out[,7]<-exp(t(coef(model)))}else{out[,7]<-exp(coef(model))}
   out[,8]<-exp(out[,4])
   out[,9]<-exp(out[,5])
   out[,10]<-100*(exp(coef(model))-1)
@@ -637,19 +637,23 @@ count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
 first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234){
   if (bootstrap=="no"){
     require(marginaleffects)
+    des1<-design.matrix[compare[1:2],]
     f2 <- margins.dat(mod,design.matrix[compare[1:2],])
     if(sum(class(mod)=="lm")>0){
-      f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare[1],]) - predict(x, type = "response", newdata = design.matrix[compare[2],])
+      f1 <- function(x) predict(x, type = "response", newdata = des1[1,]) - predict(x, type = "response", newdata = des1[2,])
     }else{
-      f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare[1],]) - predict(x, type = "probs", newdata = design.matrix[compare[2],])
+      f1 <- function(x) predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])
     }
     out <- deltamethod(mod, FUN = f1)
     out<-out[-1]
     colnames(out)[c(1,5:6)]<-c("first.diff","ll","ul")
     out[,5] <- out[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
     out[,6] <- out[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
-    out <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out)
+    #out <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out)
     out<-round(out,rounded)
+    if(sum(class(mod)=="nnet")==1){
+      out <- cbind(out,f2[nrow(design.matrix)/2,ncol(design.matrix) + 1])
+      colnames(out)[ncol(out)]<-"dv"}
 
     if(length(compare)>2){
       lc<-length(compare)/2
@@ -668,8 +672,12 @@ first.diff.fitted  <- function(mod,design.matrix,compare,alpha=.05,rounded=3,boo
         colnames(out2)[c(1,5:6)]<-c("first.diff","ll","ul")
         out2[,5] <- out2[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
         out2[,6] <- out2[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out2[,2]
-        out2 <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out2)
+        #out2 <- data.frame(fitted1=f2$fitted[1],fitted2=f2$fitted[2],out2)
         out2<-round(out2,rounded)
+        if(sum(class(mod)=="nnet")==1){
+          out2 <- cbind(out2,f2[nrow(design.matrix)/2,ncol(design.matrix) + 1])
+          colnames(out2)[ncol(out2)]<-"dv"}
+
         out<-rbind(out,out2)
       }}
 
