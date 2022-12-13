@@ -319,44 +319,6 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                              qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
       marginsdat <- round(marginsdat, rounded)
     }
-    # if (class(mod)[1] == "zerotrunc") {
-
-      p1 <- predict(mod, newdata = des[1, ], type = "response")
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          pi <- predict(mod, newdata = des[i, ], type = "response")
-          p1 <- c(p1, pi)
-        }
-      }
-      fits <- p1
-      p1.model <- mod$model
-      p1.dist <- matrix(NA, nr = num.sample, nc = length(p1))
-      for (i in 1:num.sample) {
-        set.seed(seed + i)
-        p1.model2 <- p1.model[sample(1:nrow(p1.model),
-                                     round(prop.sample * nrow(p1.model), 0), replace = TRUE),
-        ]
-        p1.mod <- zerotrunc(mod$formula, data = p1.model2,
-                            dist = mod$dist)
-        p1 <- predict(p1.mod, newdata = des[1, ], type = "response")
-        if (nrow(des) > 1) {
-          for (i in 2:nrow(des)) {
-            pi <- predict(p1.mod, newdata = des[i, ], type = "response")
-            p1 <- c(p1, pi)
-          }}
-        p1.dist[i, ] <- p1
-      }
-      p1.dist[, 1] <- sort(p1.dist[, 1])
-      if (ncol(p1.dist) > 1) {
-        for (i in 2:ncol(p1.dist)) {
-          p1.dist[, i] <- sort(p1.dist[, i])
-        }
-      }
-      se <- apply(p1.dist, 2, FUN = "sd")
-      #marginsdat <- data.frame(des=round(des, rounded), fitted = round(fits,rounded),
-      #  se = round(se, rounded), ll = round(p1.dist[nrow(p1.dist) *(alpha/2), ], rounded),
-      #  ul = round(p1.dist[nrow(p1.dist) * (1 - (alpha/2)), ], rounded))                                                                                                                                                                   (1 - (alpha/2)), ], rounded))
-    }
     if (class(mod)[1] == "hurdle") {
       p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
       ]), mode = "response"))[2:3]
