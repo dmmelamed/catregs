@@ -10,6 +10,8 @@ lr.test<-function(full.model,reduced.model){
     df.reduced <- length(coef(reduced.model))
     if(sum(class(full.model)=="negbin")>0){df.full<-df.full+1}
     if(sum(class(reduced.model)=="negbin")>0){df.reduced<-df.reduced+1}
+    if(sum(class(full.model)=="zeroinfl" & full.model$theta>0)){df.full<-df.full+1}
+    if(sum(class(reduced.model)=="zeroinfl" & reduced.model$theta>0)){df.full<-df.full+1}
     df <- abs(df.full-df.reduced)
     p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
     out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
@@ -318,6 +320,7 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
       marginsdat <- round(marginsdat, rounded)
     }
     if (class(mod)[1] == "zerotrunc") {
+
       p1 <- predict(mod, newdata = des[1, ], type = "response")
       if (nrow(des) > 1) {
         for (i in 2:nrow(des)) {
@@ -329,7 +332,7 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
       p1.model <- mod$model
       p1.dist <- matrix(NA, nr = num.sample, nc = length(p1))
       for (i in 1:num.sample) {
-        set.seed(seed)
+        set.seed(seed + i)
         p1.model2 <- p1.model[sample(1:nrow(p1.model),
                                      round(prop.sample * nrow(p1.model), 0), replace = TRUE),
         ]
@@ -337,18 +340,10 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                             dist = mod$dist)
         p1 <- predict(p1.mod, newdata = des[1, ], type = "response")
         if (nrow(des) > 1) {
-          for (j in 2:nrow(des)) {
-            set.seed(seed + j)
-            p1.model2 <- p1.model[sample(1:nrow(p1.model),
-                                         round(prop.sample * nrow(p1.model), 0),
-                                         replace = TRUE), ]
-            p1.mod <- zerotrunc(mod$formula, data = p1.model2,
-                                dist = mod$dist)
-            pi <- predict(p1.mod, newdata = des[j, ],
-                          type = "response")
+          for (i in 2:nrow(des)) {
+            pi <- predict(p1.mod, newdata = des[i, ], type = "response")
             p1 <- c(p1, pi)
-          }
-        }
+          }}
         p1.dist[i, ] <- p1
       }
       p1.dist[, 1] <- sort(p1.dist[, 1])
@@ -358,10 +353,9 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
         }
       }
       se <- apply(p1.dist, 2, FUN = "sd")
-      marginsdat <- data.frame(round(des, rounded), fitted = round(fits,
-                                                                   rounded), se = round(se, rounded), ll = round(p1.dist[nrow(p1.dist) *
-                                                                                                                           (alpha/2), ], rounded), ul = round(p1.dist[nrow(p1.dist) *
-                                                                                                                                                                        (1 - (alpha/2)), ], rounded))
+      marginsdat <- data.frame(des=round(des, rounded), fitted = round(fits,rounded),
+        se = round(se, rounded), ll = round(p1.dist[nrow(p1.dist) *(alpha/2), ], rounded),
+        ul = round(p1.dist[nrow(p1.dist) * (1 - (alpha/2)), ], rounded))                                                                                                                                                                   (1 - (alpha/2)), ], rounded))
     }
     if (class(mod)[1] == "hurdle") {
       p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
