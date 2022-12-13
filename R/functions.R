@@ -319,6 +319,36 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                              qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
       marginsdat <- round(marginsdat, rounded)
     }
+    if (class(mod)[1] == "zerotrunc") {
+      fitted <- predict(mod,newdata=des[1,])
+      if(nrow(des)>1){for(i in 2:nrow(des)){
+        fittedi <- predict(mod,newdata=des[i,])
+        fitted<-c(fitted,fittedi)}}
+
+      p1.model<-mod$model
+      p1.dist <-matrix(NA,nr=num.sample,nc=length(fitted))
+
+
+      for(i in 1:num.sample){
+        set.seed(1982 + i);  p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
+        p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
+        fitted.boot <- predict(p1.mod,newdata=des[1,])
+        if(nrow(des)>1){for(j in 2:nrow(des)){
+          fittedi <- predict(p1.mod,newdata=des[j,])
+          fitted.boot<-c(fitted.boot,fittedi)}}
+        p1.dist[i,]<-fitted.boot}
+
+      p1.dist[,1]<-sort(p1.dist[,1])
+      if(ncol(p1.dist)>1){for(i in 2:ncol(p1.dist)){
+        p1.dist[,i]<-sort(p1.dist[,i])}}
+      se <- apply(p1.dist,2,FUN="sd")
+      marginsdat<-data.frame(round(des,rounded),fitted=round(fitted,rounded),
+                             se=round(se,rounded),
+                             ll=round(p1.dist[nrow(p1.dist)*(alpha/2),],rounded),
+                             ul=round(p1.dist[nrow(p1.dist)*(1-(alpha/2)),],rounded))
+
+    }
+
     if (class(mod)[1] == "hurdle") {
       p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
       ]), mode = "response"))[2:3]
