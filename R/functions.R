@@ -319,7 +319,7 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                              qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
       marginsdat <- round(marginsdat, rounded)
     }
-    if (class(mod)[1] == "zerotrunc") {
+    #if (class(mod)[1] == "zerotrunc") {
 
       p1 <- predict(mod, newdata = des[1, ], type = "response")
       if (nrow(des) > 1) {
