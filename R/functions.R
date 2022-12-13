@@ -6,7 +6,11 @@ lr.test<-function(full.model,reduced.model){
     ll.f <-as.numeric(logLik(full.model))
     ll.r <- as.numeric( logLik(reduced.model))
     ll <- 2*abs(ll.r-ll.f)
-    df <- abs(length(coef(full.model))-length(coef(reduced.model)))
+    df.full <- length(coef(full.model))
+    df.reduced <- length(coef(reduced.model))
+    if(sum(class(full.model)=="negbin")>0){df.full<-df.full+1}
+    if(sum(class(reduced.model)=="negbin")>0){df.reduced<-df.reduced+1}
+    df <- abs(df.full-df.reduced)
     p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
     out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
                       "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
