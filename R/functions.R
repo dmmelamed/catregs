@@ -13,9 +13,9 @@ lr.test<-function(full.model,reduced.model){
     if(sum(class(full.model)=="zeroinfl" & full.model$theta>0)){df.full<-df.full+1}
     if(sum(class(reduced.model)=="zeroinfl" & reduced.model$theta>0)){df.full<-df.full+1}
     if (sum(class(full.model) == "zerotrunc" & full.model$dist == "negbin")) {df.full <- df.full + 1}
-    if (sum(class(full.model) == "hurdle" & full.model$dist$count == "negbin")) {df.full <- df.full + 1}
+    if (sum(class(full.model) == "hurdle" & full.model$dist == "negbin")) {df.full <- df.full + 1}
     if (sum(class(reduced.model) == "zerotrunc" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
-    if (sum(class(reduced.model) == "hurdle" & reduced.model$dist$count == "negbin")) {df.reduced <- df.reduced + 1}
+    if (sum(class(reduced.model) == "hurdle" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
 
     df <- abs(df.full-df.reduced)
     p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
