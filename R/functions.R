@@ -649,9 +649,10 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
         ]) - predict(x, type = "probs", newdata = des1[2,
         ])
       }
-      out <- deltamethod(mod, FUN = f1)
-      out <- out[-1]
-      colnames(out)[c(1, 5:6)] <- c("first.diff", "ll", "ul")
+      out <- hypotheses(mod, FUN = f1)
+      out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out <- as.matrix(t(out))
+      colnames(out) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
       out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
         out[, 2]
       out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
@@ -682,10 +683,10 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
               predict(x, type = "probs", newdata = design.matrix[compare2[2],
               ])
           }
-          out2 <- deltamethod(mod, FUN = f1)
-          out2 <- out2[-1]
-          colnames(out2)[c(1, 5:6)] <- c("first.diff",
-                                         "ll", "ul")
+          out2 <- hypotheses(mod, FUN = f1)
+          out2 <- c(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
+          out2<-as.matrix(t(out2))
+          colnames(out2) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
           out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
                                          lower.tail = TRUE) * out2[, 2]
           out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
@@ -849,13 +850,15 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
         ]) - predict(x, type = "probs", newdata = design.matrix[compare[4],
         ]))
       }
-      out <- deltamethod(mod, FUN = f1)
-      colnames(out)[c(2, 6:7)] <- c("est", "ll", "ul")
-      out[, 6] <- out[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 3]
-      out[, 7] <- out[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 3]
-      out[, 2:7] <- round(out[, 2:7], rounded)
+      out <- hypotheses(mod, FUN = f1)
+      out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out <- as.matrix(t(out))
+      colnames(out) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
+      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out <- round(out, rounded)
     } else if (bootstrap == "no" & class(mod)[1]=="vglm" | bootstrap == "no" & class(mod)[1]=="zeroinfl" | bootstrap == "no" & class(mod)[1]=="zerotrunc" | bootstrap == "no" & class(mod)[1]=="hurdle"){
       out<-("Model not suppported with Delta method. Use bootstrapping.")
     } else if (bootstrap=="yes"){
@@ -1006,7 +1009,6 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
     return(out)
   }else{print("Model type is not supported.")}
 }
-
 
 
 
