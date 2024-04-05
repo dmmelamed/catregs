@@ -1,15 +1,17 @@
 \name{list.coef}
 \alias{list.coef}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Transform glm model objects into model summaries that include coefficients, standard errors, exponentiated coefficients, confidence intervals and percent change.
+\title{Transform glm and mixed model objects into model summaries that include coefficients, standard errors, exponentiated coefficients, confidence intervals and percent change.
 }
 \description{
-Given a glm model object, the function computes and returns: coefficients, standard errors, z-scores, confidence intervals, p-values, exponentiated coefficients, confidence intervals for exponentiated coefficients, and percent change.
+Given a glm model object or a mixed model model object, the function computes and returns: coefficients, standard errors, z-scores, confidence intervals, p-values, exponentiated coefficients, confidence intervals for exponentiated coefficients, and percent change.
+
+Supported models include logistic regression via the glm function, ordinal regression via mass::polr, multinomial regression via nnet:multinom, Poisson regression via the glm function, negative binomial regression via mass::glm.nb, mixed effects models for continuous outcomes with serial correlation via nlme::lme, mixed effects logistic and poisson regression via lme4::glmer, mixed effects negative binomial regression via lme4::glmer.nb, and mixed effects ordinal regression via ordinal::clmm.
 }
 \usage{
 list.coef(model,rounded=3,alpha=.05)}
 \arguments{
-  \item{model}{A model object. The model should be regression model for limited dependent variables, such as a logistic regression.}
+  \item{model}{A model object. The model should be regression model for limited dependent variables, such as a logistic regression, or a mixed model from nlme or lme4/lmerTest.}
   \item{rounded}{The number of decimal places to round the output. The default is 3.}
   \item{alpha}{The alpha value for confidence intervals. Default is .05.}
 }

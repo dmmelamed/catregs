@@ -5,9 +5,11 @@
 }
 \description{
 second.diff.fitted computes the second differences between fitted values, that is, the difference between two first differences, from a regression model.
+
+Supported models include OLS regression via lm, logistic regression via glm, Poisson regression via glm, negative binomial regression via MASS:glm.nb, ordinal logistic regression via MASS::polr, partial proportional odds models via vgam::vglm, multinomial logistic regression via nnet::multinom, zero-inflated Poisson or negative binomial regression via pscl::zeroinfl, zero-truncated Poisson or negative binomial regression via countreg::zerotrunc, hurdle Poisson or negative binomial regression via pscl::hurdle, mixed effects logistic regression via lme4/lmerTest::glmer, mixed effects Poisson regression via lme4/lmerTest::glmer, mixed effects negative binomial regression via lme4/lmerTest::glmer.nb, and mixed effects ordinal logistic regression via ordinal::clmm.
 }
 \usage{
-second.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data)
+second.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",num.sample=1000,prop.sample=.9,data,seed=1234,cum.probs="no")
 }
 \arguments{
   \item{mod}{A model object. The model should be regression model for limited dependent variables, such as a logistic regression.}
@@ -19,6 +21,8 @@ second.diff.fitted(mod,design.matrix,compare,alpha=.05,rounded=3,bootstrap="no",
     \item{num.sample}{num.sample is the number samples drawn to compute the sampling distibution when using bootstrapping. Default is 1,000}
   \item{prop.sample}{prop.sample is the proportion of the original sample to include in the sampling distibution samples when using bootstrapping. Default is .9}
   \item{data}{For nonparametric inference, provide the data used in the original model statement.}
+  \item{seed}{For models using bootstrapped inference. The seed ensures reproducible results across runs. Default is 1234, but may be changed.}
+  \item{cum.probs}{For ordinal logistic regression models, including mixed effects models, do you want the first differences to be based on probabilities of the response categories or cumulative probabilities of the response categories. The default is cum.probs=="no" corresponding to non-cumulative probabilities. Change cum.probs to "yes" for cumulative probabilities.}
 
 }
 
