@@ -1163,123 +1163,127 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
 
 # Take a Poisson model object of the count process.
 count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
-  require(MASS)
-  require(ggpubr)
-  require(pscl)
-  outcome<-m1$model[,1]
-  form <- as.character(m1$formula)
-  form.2<-as.formula(paste(form[2],form[1],form[3],"|",form[3]))
-  m1<-glm(m1$formula ,family="poisson",data=m1$data )
-  m2<-glm.nb(m1$formula ,data=m1$data )
-  m3 <- zeroinfl(form.2,data=m1$data)
-  m4 <- zeroinfl(form.2,data=m1$data, dist="negbin")
-  bics<-c(BIC(m1),BIC(m2),BIC(m3),BIC(m4))
-  aics<-c(AIC(m1),AIC(m2),AIC(m3),AIC(m4))
-  out<-matrix(0,nr=2*(ncol(m1$model)),nc=16)
-  out[,1]<-c(coef(m1),rep(0,length(coef(m1))))
-  out[,5]<-c(coef(m2),rep(0,length(coef(m2))))
-  out[,9]<-c(coef(m3))
-  out[,13]<-c(coef(m4))
-  out[,2]<-c(sqrt(diag(vcov((m1)))),rep(0,length(coef(m1))))
-  out[,6]<-c(sqrt(diag(vcov((m2)))),rep(0,length(coef(m2))))
-  out[,10]<-c(sqrt(diag(vcov((m3)))))
-  out[,14]<-c(sqrt(diag(vcov((m4)))))
-  out[,3]<-out[,1]/out[,2]
-  out[,7]<-out[,5]/out[,6]
-  out[,11]<-out[,9]/out[,10]
-  out[,15]<-out[,13]/out[,14]
-  out[,4]<-dnorm(out[,3])
-  out[,8]<-dnorm(out[,7])
-  out[,12]<-dnorm(out[,11])
-  out[,16]<-dnorm(out[,15])
-  out<-round(out,rounded)
-  rownames(out)<-names(coef(m3))
-  colnames(out)<-c("Pcoef","Pse","Pz","Ppval","NBcoef","NBse","NBz","NBpval","ZIPcoef","ZIPse","ZIPz","ZIPpval","ZNBcoef","ZNBse","ZNBz","ZNBpval")
-  # Observed probabilities
-  out2<-outcome[which(outcome<(max(y.range)+1))]
-  obs<-0:max(y.range)
-  for(i in 1:length(y.range)){
-    obs[i]<-sum((out2==y.range[i]))/length(out2)}
 
-  poi<-round(dpois(y.range,lambda=mean(predict(m1,newdata=,type="response"))),rounded)
-  nb<-round(dnbinom(y.range,m2$theta,mu=mean(predict(m2,newdata=,type="response"))),rounded)
-  zpoi<-round(apply(predprob(m3),2,mean)[1:length(y.range)],rounded)
-  znb<-round(apply(predprob(m4),2,mean)[1:length(y.range)],rounded)
-  poi<-obs-poi
-  nb<-obs-nb
-  zpoi<-obs-zpoi
-  znb<-obs-znb
-  type<-c(rep("Pois",length(y.range)),rep("NB",length(y.range)),rep("ZIP",length(y.range)),rep("ZNB",length(y.range)))
-  dat<-data.frame(c(poi,nb,zpoi,znb),rep(y.range,4),type)
+  if(class(m1)[1]=="glm" & m1$family[1]$family=="poisson" ){
+    require(MASS)
+    require(ggpubr)
+    require(pscl)
+    outcome<-m1$model[,1]
+    form <- as.character(m1$formula)
+    form.2<-as.formula(paste(form[2],form[1],form[3],"|",form[3]))
+    m1<-glm(m1$formula ,family="poisson",data=m1$data )
+    m2<-glm.nb(m1$formula ,data=m1$data )
+    m3 <- zeroinfl(form.2,data=m1$data)
+    m4 <- zeroinfl(form.2,data=m1$data, dist="negbin")
+    bics<-c(BIC(m1),BIC(m2),BIC(m3),BIC(m4))
+    aics<-c(AIC(m1),AIC(m2),AIC(m3),AIC(m4))
+    out<-matrix(0,nr=2*(ncol(m1$model)),nc=16)
+    out[,1]<-c(coef(m1),rep(0,length(coef(m1))))
+    out[,5]<-c(coef(m2),rep(0,length(coef(m2))))
+    out[,9]<-c(coef(m3))
+    out[,13]<-c(coef(m4))
+    out[,2]<-c(sqrt(diag(vcov((m1)))),rep(0,length(coef(m1))))
+    out[,6]<-c(sqrt(diag(vcov((m2)))),rep(0,length(coef(m2))))
+    out[,10]<-c(sqrt(diag(vcov((m3)))))
+    out[,14]<-c(sqrt(diag(vcov((m4)))))
+    out[,3]<-out[,1]/out[,2]
+    out[,7]<-out[,5]/out[,6]
+    out[,11]<-out[,9]/out[,10]
+    out[,15]<-out[,13]/out[,14]
+    out[,4]<-dnorm(out[,3])
+    out[,8]<-dnorm(out[,7])
+    out[,12]<-dnorm(out[,11])
+    out[,16]<-dnorm(out[,15])
+    out<-round(out,rounded)
+    rownames(out)<-names(coef(m3))
+    colnames(out)<-c("Pcoef","Pse","Pz","Ppval","NBcoef","NBse","NBz","NBpval","ZIPcoef","ZIPse","ZIPz","ZIPpval","ZNBcoef","ZNBse","ZNBz","ZNBpval")
+    # Observed probabilities
+    out2<-outcome[which(outcome<(max(y.range)+1))]
+    obs<-0:max(y.range)
+    for(i in 1:length(y.range)){
+      obs[i]<-sum((out2==y.range[i]))/length(out2)}
 
-  if(use.color=="yes"){
-    out.plot<-ggplot(dat, aes(x=dat[,2], y=dat[,1]),group=dat[,3],linetype=dat[,3]) +
-      geom_hline(yintercept=0,color="gray80") +
-      theme_bw() +
-      theme(legend.position="bottom") +
-      labs(x="Outcome",y="Observed - Predicted",color="") +
-      scale_x_continuous(breaks=seq(min(y.range),max(y.range),round(length(y.range)/4)))  +
-      geom_line(aes(linetype=type,color=type)) + labs(linetype="",color="") +
-      scale_shape_manual(name="",values=c(22,21,23,24)) +
-      theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))}else{
-        out.plot<-ggplot(dat, aes(x=dat[,2], y=dat[,1]),group=dat[,3],linetype=dat[,3]) +
-          geom_hline(yintercept=0,color="gray80") +
-          theme_bw() +
-          theme(legend.position="bottom") +
-          xlab("Outcome") +
-          ylab("Observed - Predicted") +
-          scale_x_continuous(breaks=seq(min(y.range),max(y.range),round(length(y.range)/4)))  +
-          geom_line(aes(linetype=type)) + labs(linetype="") +
-          scale_shape_manual(name="",values=c(22,21,23,24)) +
-          theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    poi<-round(dpois(y.range,lambda=mean(predict(m1,newdata=,type="response"))),rounded)
+    nb<-round(dnbinom(y.range,m2$theta,mu=mean(predict(m2,newdata=,type="response"))),rounded)
+    zpoi<-round(apply(predprob(m3),2,mean)[1:length(y.range)],rounded)
+    znb<-round(apply(predprob(m4),2,mean)[1:length(y.range)],rounded)
+    poi<-obs-poi
+    nb<-obs-nb
+    zpoi<-obs-zpoi
+    znb<-obs-znb
+    type<-c(rep("Pois",length(y.range)),rep("NB",length(y.range)),rep("ZIP",length(y.range)),rep("ZNB",length(y.range)))
+    dat<-data.frame(c(poi,nb,zpoi,znb),rep(y.range,4),type)
 
-      }
+    if(use.color=="yes"){
+      out.plot<-ggplot(dat, aes(x=dat[,2], y=dat[,1]),group=dat[,3],linetype=dat[,3]) +
+        geom_hline(yintercept=0,color="gray80") +
+        theme_bw() +
+        theme(legend.position="bottom") +
+        labs(x="Outcome",y="Observed - Predicted",color="") +
+        scale_x_continuous(breaks=seq(min(y.range),max(y.range),round(length(y.range)/4)))  +
+        geom_line(aes(linetype=type,color=type)) + labs(linetype="",color="") +
+        scale_shape_manual(name="",values=c(22,21,23,24)) +
+        theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))}else{
+          out.plot<-ggplot(dat, aes(x=dat[,2], y=dat[,1]),group=dat[,3],linetype=dat[,3]) +
+            geom_hline(yintercept=0,color="gray80") +
+            theme_bw() +
+            theme(legend.position="bottom") +
+            xlab("Outcome") +
+            ylab("Observed - Predicted") +
+            scale_x_continuous(breaks=seq(min(y.range),max(y.range),round(length(y.range)/4)))  +
+            geom_line(aes(linetype=type)) + labs(linetype="") +
+            scale_shape_manual(name="",values=c(22,21,23,24)) +
+            theme(panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
-  models <- out[,c(1,2,5,6,9,10,13,14)]
-  pdat <- data.frame(var=c("Intercept",names(m1$coef)[2:length(names(m1$coefficients))]),
-                     coef=as.numeric(c(models[,1],models[,3],models[,5],models[,7])),
-                     se=as.numeric(c(models[,2],models[,4],models[,6],models[,8])),
-                     model=rep(c("Poisson","Neg Binom","ZIP","ZNB"),each=nrow(models)))
+        }
 
-  pdat <- mutate(pdat,max=coef+1.96*se,min=coef-1.96*se)
+    models <- out[,c(1,2,5,6,9,10,13,14)]
+    pdat <- data.frame(var=c("Intercept",names(m1$coef)[2:length(names(m1$coefficients))]),
+                       coef=as.numeric(c(models[,1],models[,3],models[,5],models[,7])),
+                       se=as.numeric(c(models[,2],models[,4],models[,6],models[,8])),
+                       model=rep(c("Poisson","Neg Binom","ZIP","ZNB"),each=nrow(models)))
 
-  pdat$var <- paste(rep(rep(c("c","z"),each=length(m1$coefficients)),4),pdat$var)
-  pdat1<-pdat[1:(nrow(pdat)/4),]
-  pdat1$var <- factor(pdat1$var,levels=paste(pdat1$var))
-  pdat1[((nrow(pdat1)/2)+1):nrow(pdat1),2:3]<-NA
-  p1<-ggplot(pdat1,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
-    geom_vline(xintercept=0,color="gray80") +
-    geom_pointrange() +
-    theme_classic() + labs(x="",y="",title="Poisson")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
-  pdat2<-pdat[((nrow(pdat)/4)+1):((nrow(pdat)/2)),]
-  pdat2$var <- factor(pdat2$var,levels=paste(pdat2$var))
-  pdat2[((nrow(pdat2)/2)+1):nrow(pdat2),2:3]<-NA
-  p2<-ggplot(pdat2,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
-    geom_vline(xintercept=0,color="gray80") +
-    geom_pointrange() +
-    theme_classic() + labs(x="",y="",title="Neg Binom")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
-  pdat3<-pdat[((nrow(pdat)/2)+1):(((nrow(pdat)/4))*3),]
-  pdat3$var <- factor(pdat3$var,levels=paste(pdat3$var))
-  p3<-ggplot(pdat3,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
-    geom_vline(xintercept=0,color="gray80") +
-    geom_pointrange() +
-    theme_classic() + labs(x="",y="",title="ZIP")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
-  pdat4<-pdat[(1+(((nrow(pdat)/4))*3)):nrow(pdat),]
-  pdat4$var <- factor(pdat4$var,levels=paste(pdat4$var))
-  p4<-ggplot(pdat4,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
-    geom_vline(xintercept=0,color="gray80") +
-    geom_pointrange() +
-    theme_classic() + labs(x="",y="",title="ZINB")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
-  coef.pic<-ggarrange(p1,p2,p3,p4,nrow=2,ncol=2)
+    pdat <- mutate(pdat,max=coef+1.96*se,min=coef-1.96*se)
 
-  information.criterion<-rbind(bics,aics)
-  rownames(information.criterion)<-c("BIC","AIC")
-  colnames(information.criterion)<-c("Poisson","Neg Binom","ZIP","ZNB")
+    pdat$var <- paste(rep(rep(c("c","z"),each=length(m1$coefficients)),4),pdat$var)
+    pdat1<-pdat[1:(nrow(pdat)/4),]
+    pdat1$var <- factor(pdat1$var,levels=paste(pdat1$var))
+    pdat1[((nrow(pdat1)/2)+1):nrow(pdat1),2:3]<-NA
+    p1<-ggplot(pdat1,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
+      geom_vline(xintercept=0,color="gray80") +
+      geom_pointrange() +
+      theme_classic() + labs(x="",y="",title="Poisson")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
+    pdat2<-pdat[((nrow(pdat)/4)+1):((nrow(pdat)/2)),]
+    pdat2$var <- factor(pdat2$var,levels=paste(pdat2$var))
+    pdat2[((nrow(pdat2)/2)+1):nrow(pdat2),2:3]<-NA
+    p2<-ggplot(pdat2,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
+      geom_vline(xintercept=0,color="gray80") +
+      geom_pointrange() +
+      theme_classic() + labs(x="",y="",title="Neg Binom")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
+    pdat3<-pdat[((nrow(pdat)/2)+1):(((nrow(pdat)/4))*3),]
+    pdat3$var <- factor(pdat3$var,levels=paste(pdat3$var))
+    p3<-ggplot(pdat3,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
+      geom_vline(xintercept=0,color="gray80") +
+      geom_pointrange() +
+      theme_classic() + labs(x="",y="",title="ZIP")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
+    pdat4<-pdat[(1+(((nrow(pdat)/4))*3)):nrow(pdat),]
+    pdat4$var <- factor(pdat4$var,levels=paste(pdat4$var))
+    p4<-ggplot(pdat4,aes(y=var,x=coef,xmin=coef-1.96*se,xmax=coef+1.96*se)) +
+      geom_vline(xintercept=0,color="gray80") +
+      geom_pointrange() +
+      theme_classic() + labs(x="",y="",title="ZINB")  + scale_x_continuous(limits=c(min(pdat$min),max(pdat$max)))
+    coef.pic<-ggarrange(p1,p2,p3,p4,nrow=2,ncol=2)
 
-  vuong(m1,m3)
-  vuong(m2,m4)
+    information.criterion<-rbind(bics,aics)
+    rownames(information.criterion)<-c("BIC","AIC")
+    colnames(information.criterion)<-c("Poisson","Neg Binom","ZIP","ZNB")
 
-  outp<-list(ic=information.criterion,pic=out.plot,models=out,models.pic=coef.pic)
+    vuong(m1,m3)
+    vuong(m2,m4)
+
+    outp<-list(ic=information.criterion,pic=out.plot,models=out,models.pic=coef.pic)} else{
+      outp <- print("Model type should be Poisson regression as estimated by the glm function.")
+    }
   return(outp)}
 
 

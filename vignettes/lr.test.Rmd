@@ -42,6 +42,23 @@ Here is an application to the models defined above:
 lr.test(m1,m0)
 ```
 
+In other contexts, such as when models are estimated with some version of maximum likelihood, the anova function returns a p-value. The lr.test function does as well in these contexts and the two functions are equivalent. 
+For example, consider this test of nested models comparing a reduced model with no serial correlation specification to a model with an AR(1) serial correlation specification:
+```{r}
+data("rside")
+require(nlme)
+m2 <- lme(fixed = lwage ~ black + hisp + union + married + exper + educ + yeart   ,
+            random = ~1|nr,
+            data = wagepan, na.action=na.omit,method="ML")
+m3 <- lme(fixed = lwage ~ black + hisp + union + married + exper + educ + yeart   ,
+          random = ~1|nr,
+          data = wagepan, na.action=na.omit,method="ML",
+          correlation=corARMA(p=1,q=0,form=~1|nr))
+anova(m2,m3)
+lr.test(m2,m3)
+
+```
+
 
 
 
