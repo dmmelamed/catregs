@@ -1,0 +1,3 @@
+load("/Users/melamed.9/Desktop/School/Research/Complete/Published/2024/Categorical Regression Book/R Package/catregs/data/rside.RData")
+ls()
+head(wagepan)
