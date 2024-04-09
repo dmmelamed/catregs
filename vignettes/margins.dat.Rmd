@@ -4,7 +4,7 @@ output: rmarkdown::html_vignette
 description: >
   This vignette explains the rationale and implementation for the margins.dat function.
 vignette: >
-  %\VignetteIndexEntry{lr.test}
+  %\VignetteIndexEntry{margins.dat}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
