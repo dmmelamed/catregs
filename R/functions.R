@@ -2,10 +2,10 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
                                bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                seed = 1234,cum.probs="no")  {
 
-if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="polr" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
-  class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" ){
+if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
+  class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" | class(mod)[1]=="polr"){
 
-    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="polr" | bootstrap == "no" & class(mod)[1]=="multinom"  |
+    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="multinom"  |
         bootstrap == "no" & class(mod)[1]=="negbin"){
       require(marginaleffects)
 
@@ -105,6 +105,38 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="polr" | class(mo
             out <- rbind(out, out2)}
         }
         out <- round(out,rounded)
+    }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="no"){
+      require(marginaleffects)
+      des1 <- design.matrix[compare[1:2], ]
+      f1 <- function(x) predict(x, type = "probs", newdata = des1[1,
+      ]) - predict(x, type = "probs", newdata = des1[2,
+      ])
+      out <- hypotheses(mod, FUN = f1)
+      out <- data.frame(first.diff=out$estimate,std.error=out$std.error,statistic=out$statistic,p.value=out$p.value,ll=out$conf.low,ul=out$conf.high)
+      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      if (length(compare) > 2) {
+        lc <- length(compare)/2
+        coms <- seq(1, length(compare), 2)
+        coms <- coms[-1]
+        for (j in 1:(lc - 1)) {
+          compare2 <- compare[coms[j]:(coms[j] + 1)]
+          f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare2[1],]) - predict(x, type = "probs", newdata = design.matrix[compare2[2],])
+          out2 <- hypotheses(mod, FUN = f1)
+          out2 <- data.frame(first.diff=out2$estimate,std.error=out2$std.error,statistic=out2$statistic,p.value=out2$p.value,ll=out2$conf.low,ul=out2$conf.high)
+          out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
+                                         lower.tail = TRUE) * out2[, 2]
+          out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
+                                         lower.tail = TRUE) * out2[, 2]
+          out <- rbind(out, out2)
+          }
+      }
+      out <- round(out,rounded)
+      out <- data.frame(outcome.level=mod$lev,out)
+    }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="yes"){
+      out <- print("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
     }
   else if (bootstrap == "no" & class(mod)[1]=="clmm"){out <- "Delta Method is not supported for mixed effects ordinal logistic regression. Use bootstrapping :("}
   else if (bootstrap == "yes" & class(mod)[1]=="glmerMod"){out<-"Bootstrapping is not supported. Use the delta method." }
@@ -266,7 +298,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
      class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" |
      class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" ){
 
-    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="polr" | bootstrap == "no" & class(mod)[1]=="multinom"  |
+    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="multinom"  |
         bootstrap == "no" & class(mod)[1]=="negbin"){
       require(marginaleffects)
       if (sum(class(mod) == "lm") > 0) {
@@ -287,7 +319,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
       out <- hypotheses(mod, FUN = f1)
       out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
       out <- as.matrix(t(out))
-      colnames(out) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
+      colnames(out) <- c("second.diff","std. error","statistic","p-value" ,"ll", "ul")
       out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
         out[, 2]
       out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
@@ -308,7 +340,23 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
       out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
         out[, 2]
       out <- round(out, rounded)
-      }else if (bootstrap == "no" & class(mod)[1]=="vglm" | bootstrap == "no" & class(mod)[1]=="zeroinfl" | bootstrap == "no" & class(mod)[1]=="zerotrunc" | bootstrap == "no" & class(mod)[1]=="hurdle" | bootstrap == "no" & class(mod)[1]=="clmm"){
+      }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="no"){
+        require(marginaleffects)
+        des1 <- design.matrix[compare[1:4], ]
+        f1 <- function(x) (predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])) -
+          (predict(x, type = "probs", newdata = des1[3,]) - predict(x, type = "probs", newdata = des1[4,]))
+        out <- hypotheses(mod, FUN = f1)
+        out <- data.frame(second.diff=out$estimate,std.error=out$std.error,statistic=out$statistic,p.value=out$p.value,ll=out$conf.low,ul=out$conf.high)
+        out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[, 2]
+        out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[, 2]
+        out <- round(out,rounded)
+        out <- data.frame(outcome.level=mod$lev,out)
+
+              }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="yes"){
+                out <- print("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
+              }else if (bootstrap == "no" & class(mod)[1]=="vglm" | bootstrap == "no" & class(mod)[1]=="zeroinfl" | bootstrap == "no" & class(mod)[1]=="zerotrunc" | bootstrap == "no" & class(mod)[1]=="hurdle" | bootstrap == "no" & class(mod)[1]=="clmm"){
       out<-("Model not suppported with Delta method. Use bootstrapping.")
     } else if (bootstrap=="yes"){
 
@@ -365,7 +413,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                     predict(fd.modi, type = "probs", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="multinom"){
 
         des1 <- design.matrix[compare[1:4], ]
@@ -381,7 +429,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                     predict(fd.modi, type = "probs", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="vglm"){
 
         out <- ("Partial proportional odds model not suppported in a general way. An example is provided in the following script: [first.diff.fitted.partial.prop.odds.e.g.r]")
@@ -401,7 +449,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                        predict(fd.modi, type = "response", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="zeroinfl") {
 
         des1 <- design.matrix[compare[1:4], ]
@@ -418,7 +466,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                        predict(fd.modi, type = "response", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="zerotrunc") {
 
         des1 <- design.matrix[compare[1:4], ]
@@ -435,7 +483,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                        predict(fd.modi, type = "response", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="hurdle") {
 
         des1 <- design.matrix[compare[1:4], ]
@@ -452,7 +500,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                        predict(fd.modi, type = "response", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       }else if(class(mod)=="clmm" & cum.probs=="no"){
         obs.diff<- (data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[1],])))$prob -
           data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[2],])))$prob) -
@@ -469,7 +517,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                data.frame(emmeans(fd.modi,~dv,mode="prob",at=as.list(design[compare[4],])))$prob)
           fd.dist[i,] <- obs.diffi}
         fd.dist <- apply(fd.dist,2,FUN="sort")
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(sd(fd.dist),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(sd(fd.dist),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="clmm" & cum.probs=="yes"){
         obs.diff<- (data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(design[compare[1],])))$cumprob -
           data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(design[compare[2],])))$cumprob) -
@@ -486,7 +534,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                data.frame(emmeans(fd.modi,~cut,mode="cum.prob",at=as.list(design[compare[4],])))$cumprob)
           fd.dist[i,] <- obs.diffi}
         fd.dist <- apply(fd.dist,2,FUN="sort")
-        out <- data.frame(first.diff=round(obs.diff,rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(second.diff=round(obs.diff,rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       }else if(class(mod)[1]=="glmerMod") {
         out <- "Model type not supported with bootstrapping. Use Delta method."
       }
