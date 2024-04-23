@@ -2,7 +2,7 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
                                bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                seed = 1234,cum.probs="no")  {
 
-if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
+if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  | class(mod)[1]=="lme" |
   class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" | class(mod)[1]=="polr"){
 
     if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="multinom"  |
