@@ -1,3 +1,591 @@
+
+
+lr.test<-function(full.model,reduced.model){
+  # "Note: It does not matter if you correctly identified the Full and Reduced Models. The function detects it based on DF.")
+  if(class(full.model)[1]=="lm" | class(full.model)[1]=="glm" | class(full.model)[1]=="polr" | class(full.model)[1]=="multinom" | class(full.model)[1]=="vglm"  |
+     class(full.model)[1]=="negbin" | class(full.model)[1]=="zeroinfl" | class(full.model)[1]=="zerotrunc" | class(full.model)[1]=="hurdle"){
+
+  n.f <- length(predict(full.model))
+  n.r <- length(predict(reduced.model))
+  if(n.f != n.r){print("The models were not fit to the same data! WTF")}else if (class(full.model)[1]=="vglm"){
+    ll.f <-as.numeric(logLik(full.model))
+    ll.r <- as.numeric( logLik(reduced.model))
+    ll <- 2*abs(ll.r-ll.f)
+    df.full <- length(coef(full.model))
+    df.reduced <- length(coef(reduced.model))
+    df <- abs(df.full-df.reduced)
+    p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
+    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
+                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
+
+  } else{
+    ll.f <-as.numeric(logLik(full.model))
+    ll.r <- as.numeric( logLik(reduced.model))
+    ll <- 2*abs(ll.r-ll.f)
+    df.full <- length(coef(full.model))
+    df.reduced <- length(coef(reduced.model))
+    if(sum(class(full.model)=="negbin")>0){df.full<-df.full+1}
+    if(sum(class(reduced.model)=="negbin")>0){df.reduced<-df.reduced+1}
+    if(sum(class(full.model)=="zeroinfl" & full.model$theta>0)){df.full<-df.full+1}
+    if(sum(class(reduced.model)=="zeroinfl" & reduced.model$theta>0)){df.full<-df.full+1}
+    if (sum(class(full.model) == "zerotrunc" & full.model$dist == "negbin")) {df.full <- df.full + 1}
+    if (sum(class(full.model) == "hurdle" & full.model$dist == "negbin")) {df.full <- df.full + 1}
+    if (sum(class(reduced.model) == "zerotrunc" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
+    if (sum(class(reduced.model) == "hurdle" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
+
+    df <- abs(df.full-df.reduced)
+    p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
+    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
+                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
+  }
+    return(out)} else {print("Model type not supported.")}}
+
+
+
+margins.des<-function (mod, ivs, excl = "nonE",data) {
+  if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="polr" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
+     class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  |
+     class(mod)[1]=="clmm"  | class(mod)[1]=="lme" | class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
+
+
+   if(sum(class(mod)=="nnet")>0){
+    c1<-as.character(mod$call)
+    require(MASS)
+    m.polr<-polr(c1[2],data=data)
+    mod<-m.polr}
+
+  if(class(mod)[1]=="lme"){
+    X5 <- mod$data # pull out all of the data
+    var.names <- names(mod$fixDF$terms) # get the names of the variables that were used
+    var.names <- var.names[-1] # remove the intercept
+    X2 <- X5[,match(var.names,colnames(X5))] # from the full data, keep only the variables in the model
+    X.mod <- X2 # rename
+    if (excl == "nonE") {}else {
+      X.mod <- X2[, -match(excl, colnames(X2))]
+      var.names <- var.names[match(colnames(X.mod), var.names)]} # If you want to remove any factor-coded variables
+
+    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # Exclude "ivs" because those are not set to their means
+    var.names <- var.names[-match(names(ivs), var.names)] # Exclude "ivs" because those are not set to their means
+    if (class(X.mod) == "numeric") {
+      controls <- mean(X.mod)
+      names(controls) <- var.names
+    }else {
+      controls <- apply(X.mod, 2, FUN = "mean")} # Set covariates to their means
+  }else if(class(mod)[1]=="glmerMod"){
+    dv <- as.character(formula(mod))[[2]]
+    var.names <- names(fixef(mod)) #names of variables in the model
+    var.names <- var.names[-1] #remove intercept
+    # Seems like I need to add a variable to the function that defines the DV (so I can adjust for missing data)
+    data <- data[, match(c(dv,var.names), colnames(ess))]
+    X.mod <- na.omit(data) # remove missing responses
+    X.mod <- X.mod[,-1] # Now, remove the dv from the predictors
+    if (excl == "nonE") {
+    }else {
+      X.mod <- X.mod[, -match(excl, colnames(X.mod))]
+      var.names <- var.names[match(colnames(X.mod), var.names)]
+    }
+    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # remove variables in the ivs statement
+    var.names <- var.names[-match(names(ivs), var.names)]
+    if (class(X.mod) == "numeric") {
+      controls <- mean(X.mod)
+      names(controls) <- var.names
+    }else {
+      controls <- apply(X.mod, 2, FUN = "mean")
+    }
+  }else if(class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
+    dv <- as.character(formula(mod))[[2]]
+    var.names <- names(fixef(mod)) #names of variables in the model
+    var.names <- var.names[-1] #remove intercept
+    # Seems like I need to add a variable to the function that defines the DV (so I can adjust for missing data)
+    data <- data[, match(c(dv,var.names), colnames(ess))]
+    X.mod <- na.omit(data) # remove missing responses
+    X.mod <- X.mod[,-1] # Now, remove the dv from the predictors
+    if (excl == "nonE") {
+    }else {
+      X.mod <- X.mod[, -match(excl, colnames(X.mod))]
+      var.names <- var.names[match(colnames(X.mod), var.names)]
+    }
+    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # remove variables in the ivs statement
+    var.names <- var.names[-match(names(ivs), var.names)]
+    if (class(X.mod) == "numeric") {
+      controls <- mean(X.mod)
+      names(controls) <- var.names
+    }else {
+      controls <- apply(X.mod, 2, FUN = "mean")
+    }
+  }else if(class(mod)[1]=="clmm"){
+    X <- mod$model
+    X <- X[,-c(1,ncol(X))]
+    controls <- apply(X, 2, FUN = "mean")
+    controls <- controls[-match(names(ivs), colnames(X))]
+  }
+  else{
+    X.mod <- mod$model[, -1]
+    var.names <- colnames(X.mod)
+    if (excl == "nonE") {
+    }
+    else {
+      X.mod <- X.mod[, -match(excl, colnames(X.mod))]
+      var.names <- var.names[match(colnames(X.mod), var.names)]
+    }
+    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))]
+    var.names <- var.names[-match(names(ivs), var.names)]
+    if (class(X.mod) == "numeric") {
+      controls <- mean(X.mod)
+      names(controls) <- var.names
+    }
+    else {
+      controls <- apply(X.mod, 2, FUN = "mean")
+    }}
+
+  design <- ivs
+  design <- cbind(design, t(controls))
+  return(design)} else {print("Model type not supported.")}
+}
+
+
+
+margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
+                         pscl.data = data, num.sample = 1000, prop.sample = 0.9, seed = 1234) {
+  require(emmeans)
+
+  if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="polr" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
+     class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  |
+     class(mod)[1]=="clmm"  | class(mod)[1]=="lme" | class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
+
+
+    if (cumulate == "no") {
+      if (sum(class(mod) == "lm") > 0) {
+        probs <- data.frame(emmeans(mod, ~1, type = "response",
+                                    weights = "proportional", at = as.list(des[1,
+                                    ])))
+        if (nrow(des > 1)) {
+          for (i in 2:nrow(des)) {
+            probsi <- data.frame(emmeans(mod, ~1, type = "response",
+                                         weights = "proportional", at = as.list(des[i,
+                                         ])))
+            probs <- rbind(probs, probsi)
+          }
+        }
+        probs <- probs[, -c(1, 4)]
+        probs[, 3] <- probs[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 2]
+        probs[, 4] <- probs[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 2]
+        colnames(probs) <- c("fitted", "SE", "ll", "ul")
+        marginsdat <- data.frame(des, probs)
+        marginsdat <- round(marginsdat, rounded)
+      }
+      if (class(mod)[1] == "polr") {
+        probs <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[1,
+        ]), weights = "proportional", mode = "prob"))
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            probsi <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[i,
+            ]), weights = "proportional", mode = "prob"))
+            probs <- rbind(probs, probsi)
+          }
+        }
+        probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        colnames(probs)[5:6] <- c("ll", "ul")
+        probs <- probs[, -4]
+        probs[, 2] <- round(probs[, 2], rounded)
+        probs[, 3] <- round(probs[, 3], rounded)
+        probs[, 4] <- round(probs[, 4], rounded)
+        probs[, 5] <- round(probs[, 5], rounded)
+        des <- des[rep(1:nrow(des), each = length(table(mod$model[,1]))),
+        ]
+        des <- round(des, rounded)
+        marginsdat <- data.frame(des, probs)
+      }
+      if (class(mod)[1] == "multinom") {
+        cl <- as.character(mod$call)[2]
+        dv<-strsplit(cl," ")[[1]][1]
+        probs <- data.frame(emmeans(mod, specs=dv, at = as.list(des[1,
+        ]), weights = "proportional", mode = "prob"))
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            probsi <- data.frame(emmeans(mod, specs=dv, at = as.list(des[i,
+            ]), weights = "proportional", mode = "prob"))
+            probs <- rbind(probs, probsi)
+          }
+        }
+        probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        colnames(probs)[5:6] <- c("ll", "ul")
+        probs <- probs[, -4]
+        probs[, 2] <- round(probs[, 2], rounded)
+        probs[, 3] <- round(probs[, 3], rounded)
+        probs[, 4] <- round(probs[, 4], rounded)
+        probs[, 5] <- round(probs[, 5], rounded)
+        des <- des[rep(1:nrow(des), each = length(mod$lev)),
+        ]
+        des <- round(des, rounded)
+        marginsdat <- data.frame(des, probs)
+      }
+
+
+
+      if (class(mod)[1] == "vglm") {
+        preds <- predict(mod, newdata = des[1, ], type = "link",
+                         se.fit = TRUE)
+        pdes <- des[rep(1, each = length(preds$fitted.values) +
+                          1), ]
+        pdes <- round(pdes, rounded)
+        pdes <- data.frame(pdes, dv = 1:(length(preds$fitted.values) +
+                                           1), c(t(preds$fitted.values), NA), c(t(preds$se.fit),
+                                                                                NA))
+        colnames(pdes)[(ncol(pdes) - 1):ncol(pdes)] <- c("fitted",
+                                                         "se")
+        pdes <- mutate(pdes, pr = plogis(fitted), ll = plogis(fitted -
+                                                                qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
+                       ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                     se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
+        pdes <- pdes[, -match(c("fitted", "se", "ll", "ul"),
+                              colnames(pdes))]
+        pdes <- mutate(pdes, prob = NA)
+        pdes$prob[1] <- pdes$pr[1]
+        pdes$prob[nrow(pdes)] <- 1 - pdes$pr[nrow(pdes) -
+                                               1]
+        for (i in 2:(nrow(pdes) - 1)) {
+          pdes$prob[i] <- pdes$pr[i] - pdes$pr[i - 1]
+        }
+        pdes <- mutate(pdes, se = NA)
+        pdes$se[1] <- pdes$SE[1]
+        pdes$se[nrow(pdes)] <- pdes$SE[nrow(pdes) - 1]
+        for (i in 2:(nrow(pdes) - 1)) {
+          pdes$se[i] <- rubins.rule(c(pdes$SE[i], pdes$SE[i]))
+        }
+        pdes <- pdes[, -match(c("pr", "SE"), colnames(pdes))]
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            predsi <- predict(mod, newdata = des[i, ],
+                              type = "link", se.fit = TRUE)
+            pdesi <- des[rep(i, each = length(predsi$fitted.values) +
+                               1), ]
+            pdesi <- data.frame(pdesi, dv = 1:(length(predsi$fitted.values) +
+                                                 1), c(t(predsi$fitted.values), NA), c(t(predsi$se.fit),
+                                                                                       NA))
+            colnames(pdesi)[(ncol(pdesi) - 1):ncol(pdesi)] <- c("fitted",
+                                                                "se")
+            pdesi <- mutate(pdesi, pr = plogis(fitted),
+                            ll = plogis(fitted - qnorm(1 - (alpha/2),
+                                                       lower.tail = TRUE) * se), ul = plogis(fitted +
+                                                                                               qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                                                                               se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
+            pdesi <- pdesi[, -match(c("fitted", "se", "ll",
+                                      "ul"), colnames(pdesi))]
+            pdesi <- mutate(pdesi, prob = NA)
+            pdesi$prob[1] <- pdesi$pr[1]
+            pdesi$prob[nrow(pdesi)] <- 1 - pdesi$pr[nrow(pdesi) -
+                                                      1]
+            for (i in 2:(nrow(pdesi) - 1)) {
+              pdesi$prob[i] <- pdesi$pr[i] - pdesi$pr[i -
+                                                        1]
+            }
+            pdesi <- mutate(pdesi, se = NA)
+            pdesi$se[1] <- pdesi$SE[1]
+            pdesi$se[nrow(pdesi)] <- pdesi$SE[nrow(pdesi) -
+                                                1]
+            for (i in 2:(nrow(pdesi) - 1)) {
+              pdesi$se[i] <- rubins.rule(c(pdesi$SE[i],
+                                           pdesi$SE[i]))
+            }
+            pdesi <- pdesi[, -match(c("pr", "SE"), colnames(pdesi))]
+            pdes <- rbind(pdes, pdesi)
+          }
+        }
+        pdes <- mutate(pdes, ll = prob - qnorm(1 - (alpha/2),
+                                               lower.tail = TRUE) * se, ul = prob + qnorm(1 -
+                                                                                            (alpha/2), lower.tail = TRUE) * se)
+        pdes <- mutate(pdes, prob = round(prob, rounded),
+                       se = round(se, rounded), ll = round(ll, rounded),
+                       ul = round(ul, rounded))
+        marginsdat <- pdes
+      }
+      if (class(mod)[1] == "zeroinfl") {
+        p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
+        ]), mode = "count", data = pscl.data))
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
+            ]), mode = "count", data = pscl.data))
+            p1 <- rbind(p1, pi)
+          }
+        }
+        p1 <- p1[, c(2, 3)]
+        colnames(p1)[1] <- "fitted"
+        marginsdat <- cbind(des, p1)
+        marginsdat <- mutate(marginsdat, ll = fitted - qnorm(1 -
+                                                               (alpha/2), lower.tail = TRUE) * SE, ul = fitted +
+                               qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
+        marginsdat <- round(marginsdat, rounded)
+      }
+      if (class(mod)[1] == "zerotrunc") {
+        fitted <- predict(mod,newdata=des[1,])
+        if(nrow(des)>1){for(i in 2:nrow(des)){
+          fittedi <- predict(mod,newdata=des[i,])
+          fitted<-c(fitted,fittedi)}}
+
+        p1.model<-mod$model
+        p1.dist <-matrix(NA,nr=num.sample,nc=length(fitted))
+
+
+        for(i in 1:num.sample){
+          set.seed(1982 + i);  p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
+          p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
+          fitted.boot <- predict(p1.mod,newdata=des[1,])
+          if(nrow(des)>1){for(j in 2:nrow(des)){
+            fittedi <- predict(p1.mod,newdata=des[j,])
+            fitted.boot<-c(fitted.boot,fittedi)}}
+          p1.dist[i,]<-fitted.boot}
+
+        p1.dist[,1]<-sort(p1.dist[,1])
+        if(ncol(p1.dist)>1){for(i in 2:ncol(p1.dist)){
+          p1.dist[,i]<-sort(p1.dist[,i])}}
+        se <- apply(p1.dist,2,FUN="sd")
+        marginsdat<-data.frame(round(des,rounded),fitted=round(fitted,rounded),
+                               se=round(se,rounded),
+                               ll=round(p1.dist[nrow(p1.dist)*(alpha/2),],rounded),
+                               ul=round(p1.dist[nrow(p1.dist)*(1-(alpha/2)),],rounded))
+
+      }
+
+      if (class(mod)[1] == "hurdle") {
+        p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
+        ]), mode = "response"))[2:3]
+        if (nrow(des > 1)) {
+          for (i in 2:nrow(des)) {
+            pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
+            ]), mode = "response"))[2:3]
+            p1 <- rbind(p1, pi)
+          }
+        }
+        ll <- p1$emmean - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        ul <- p1$emmean + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        marginsdat <- data.frame(round(des, rounded), fitted = round(p1$emmean,
+                                                                     rounded), se = round(p1$SE, rounded), ll = round(ll,
+                                                                                                                      rounded), ul = round(ul, rounded))
+      }
+
+      if (class(mod)[1] == "lme") {
+        p1 <- data.frame(emmeans(mod, ~1, type = "response",
+                                 weights = "proportional", at = as.list(des[1,])))[2:3]
+        if (nrow(des > 1)) {
+          for (i in 2:nrow(des)) {
+            pi <- data.frame(emmeans(mod, ~1, type = "response",
+                                     weights = "proportional", at = as.list(des[i,])))[2:3]
+            p1 <- rbind(p1, pi)
+          }
+        }
+        ll <- p1$emmean - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        ul <- p1$emmean + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        marginsdat <- data.frame(round(des, rounded), fitted = round(p1$emmean,
+                                                                     rounded), se = round(p1$SE, rounded), ll = round(ll,
+                                                                                                                      rounded), ul = round(ul, rounded))
+
+      }
+
+      if (class(mod)[1] == "glmerMod") {
+        p1 <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[1,])))
+        if (nrow(des > 1)) {
+          for (i in 2:nrow(des)) {
+            pi <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[i,])))
+            p1 <- rbind(p1, pi)
+          }
+        }
+        ll <- p1[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        ul <- p1[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        marginsdat <- data.frame(round(des, rounded), fitted = round(p1[,2],rounded), se = round(p1[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
+      }
+      if (class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
+        p1 <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[1,])))
+        if (nrow(des > 1)) {
+          for (i in 2:nrow(des)) {
+            pi <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[i,])))
+            p1 <- rbind(p1, pi)
+          }
+        }
+        ll <- p1[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        ul <- p1[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          p1$SE
+        marginsdat <- data.frame(round(des, rounded), fitted = round(p1[,2],rounded), se = round(p1[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
+      }
+      if (class(mod)[1] == "clmm") {
+        out <- data.frame(emmeans(mod,~dv,mode="prob",at=as.list(des[1,])))
+        if(nrow(des) >1){for(i in 2:nrow(des)){
+          out2 <- data.frame(emmeans(mod,~dv,mode="prob",at=as.list(des[i,])))
+          out <- rbind(out,out2)}}
+        ll <- out[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out$SE
+        ul <- out[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out$SE
+        marginsdat <- data.frame(des,dv.level = out[,1], fitted = round(out[,2],rounded), se = round(out[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
+      }
+    }
+    else {
+      if (class(mod) == "polr") {
+        probs <- data.frame(emmeans(mod, ~cut, at = as.list(des[1,
+        ]), weights = "proportional", mode = "cum.prob"))
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            probsi <- data.frame(emmeans(mod, ~cut, at = as.list(des[i,
+            ]), weights = "proportional", mode = "cum.prob"))
+            probs <- rbind(probs, probsi)
+          }
+        }
+        probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          probs[, 3]
+        colnames(probs)[5:6] <- c("ll", "ul")
+        probs <- probs[, -4]
+        probs[, 2] <- round(probs[, 2], rounded)
+        probs[, 3] <- round(probs[, 3], rounded)
+        probs[, 4] <- round(probs[, 4], rounded)
+        probs[, 5] <- round(probs[, 5], rounded)
+        des <- des[rep(1:nrow(des), each = length(table(mod$model[,
+                                                                  1])) - 1), ]
+        des <- round(des, rounded)
+        marginsdat <- data.frame(des, probs)
+      }
+      if (class(mod) == "vglm") {
+        preds <- predict(mod, newdata = des[1, ], type = "link",
+                         se.fit = TRUE)
+        pdes <- des[rep(1, each = length(preds$fitted.values)),
+        ]
+        pdes <- round(pdes, rounded)
+        pdes <- data.frame(pdes, colnames(preds$fitted.values),
+                           t(preds$fitted.values), t(preds$se.fit))
+        colnames(pdes)[(ncol(pdes) - 2):ncol(pdes)] <- c("dv",
+                                                         "fitted", "se")
+        if (nrow(des) > 1) {
+          for (i in 2:nrow(des)) {
+            predsi <- predict(mod, newdata = des[i, ],
+                              type = "link", se.fit = TRUE)
+            pdesi <- des[rep(i, each = length(predsi$fitted.values)),
+            ]
+            pdesi <- round(pdesi, rounded)
+            pdesi <- data.frame(pdesi, colnames(preds$fitted.values),
+                                t(predsi$fitted.values), t(predsi$se.fit))
+            colnames(pdesi)[(ncol(pdesi) - 2):ncol(pdesi)] <- c("dv",
+                                                                "fitted", "se")
+            pdes <- rbind(pdes, pdesi)
+          }
+        }
+        pdes <- mutate(pdes, prob = plogis(fitted), ll = plogis(fitted -
+                                                                  qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
+                       ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+                                     se), SE = (prob - ll)/qnorm(1 - (alpha/2)))
+        pdes <- pdes[, -match(c("fitted", "se"), colnames(pdes))]
+        pdes <- mutate(pdes, prob = round(prob, rounded),
+                       SE = round(SE, rounded), ll = round(ll, rounded),
+                       ul = round(ul, rounded))
+        marginsdat <- pdes
+      }
+      if (class(mod)[1] == "clmm") {
+        out <- data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(des[1,])))
+        if(nrow(des) >1){for(i in 2:nrow(des)){
+          out2 <- data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(des[i,])))
+          out <- rbind(out,out2)}}
+        ll <- out[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out$SE
+        ul <- out[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out$SE
+        marginsdat <- data.frame(round(des, rounded),cut=out[,1], fitted = round(out[,2],rounded), se = round(out[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
+      }
+    }
+    colnames(marginsdat)[match("SE", colnames(marginsdat))] <- "se"
+    return(marginsdat)
+  } else {print("Model type not supported.")}}
+
+
+
+
+margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
+                               prop.sample = 0.9, alpha = 0.05, seed = 1234, rounded = 3) {
+  require(tidyverse)
+  require(MASS)
+  if(class(mod)=="clogistic"){
+    coefs <- as.numeric(na.omit(coef(mod)))
+    des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
+                                            coefs), probs = lp/sum(lp))
+    sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
+    vcovc <- vcov(mod)
+    sl <- which(is.na(coef(mod)))
+    if (length(sl) > 0) {
+      vcovc <- vcovc[-sl, -sl]
+    }
+    for (i in 1:num.sample) {
+      set.seed(seed + i)
+      lp <- exp(as.matrix(design.matrix) %*% mvrnorm(mu = coefs,
+                                                     Sigma = vcovc))
+      sims[i, ] <- lp/sum(lp)
+    }
+    sims <- apply(sims, 2, FUN = "sort")
+    des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
+                                                                       alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
+    out <- round(des, rounded)
+    if (run.boot == "yes") {
+      boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
+      for (i in 1:num.sample) {
+        set.seed(seed + i)
+        mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
+                                                            nrow(mod$model), 0), replace = FALSE), ]
+        m.1 <- clogistic(mod$formula, strata = `(strata)`,
+                         data = mod2)
+        coefs2 <- as.numeric(na.omit(coef(m.1)))
+        design20 <- mutate(des, lp = exp(as.matrix(design.matrix) %*%
+                                           coefs2), probs = lp/sum(lp))
+        boot.dist[i, ] <- design20[, ncol(design20)]
+      }
+      boot.dist[, 1] <- sort(boot.dist[, 1])
+      if (ncol(boot.dist) > 1) {
+        for (i in 2:ncol(boot.dist)) {
+          boot.dist[, i] <- sort(boot.dist[, i])
+        }
+      }
+      lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),
+      ]
+      upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
+      ]
+      des <- round(mutate(des, ll.boot = lower.limit, ul.boot = upper.limit),
+                   rounded)
+      out <- list(des = des, boot.dist = boot.dist)
+    }
+    return(out)} else if(class(mod)=="mlogit"){
+      des <- mutate(design.matrix, probs= predict(mod,newdata=design.matrix))
+      require(MASS)
+      m2 <- mod
+      sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
+      vcovc <- vcov(mod)
+      for (i in 1:num.sample) {
+        set.seed(seed + i)
+        m2$coefficients <- mvrnorm(mu = coef(mod), Sigma = vcov(mod))
+        sims[i, ] <- predict(m2,newdata=design.matrix)}
+      sims <- apply(sims, 2, FUN = "sort")
+      des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
+                                                                         alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
+      out <- round(des, rounded)
+      return(out)
+    } else{print("Model type is not supported.")}}
+
+
+
+
+
 first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounded = 3,
                                bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                seed = 1234,cum.probs="no")  {
@@ -5,7 +593,7 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
 if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  | class(mod)[1]=="lme" |
   class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" | class(mod)[1]=="polr"){
 
-    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="multinom"  |
+    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" |
         bootstrap == "no" & class(mod)[1]=="negbin"){
       require(marginaleffects)
 
@@ -24,7 +612,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
       out <- hypotheses(mod, FUN = f1)
       out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
       out <- as.matrix(t(out))
-      colnames(out) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
+      colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
       out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
         out[, 2]
       out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
@@ -58,7 +646,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           out2 <- hypotheses(mod, FUN = f1)
           out2 <- c(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
           out2<-as.matrix(t(out2))
-          colnames(out2) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
+          colnames(out2) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
           out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
                                          lower.tail = TRUE) * out2[, 2]
           out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
@@ -72,6 +660,40 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           out <- rbind(out, out2)
         }
       }
+    } else if (bootstrap == "no" & class(mod)[1]=="multinom"){
+      require(marginaleffects)
+      des1 <- design.matrix[compare[1:2], ]
+      f1 <- function(x) predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])
+      out <- hypotheses(mod, FUN = f1)
+      out <- cbind(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
+      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out <- round(out, rounded)
+      if (length(compare) > 2) {
+        lc <- length(compare)/2
+        coms <- seq(1, length(compare), 2)
+        coms <- coms[-1]
+        for (j in 1:(lc - 1)) {
+          compare2 <- compare[coms[j]:(coms[j] + 1)]
+          f1 <- function(x) predict(x, type = "probs",
+                                      newdata = design.matrix[compare2[1], ]) -
+              predict(x, type = "probs", newdata = design.matrix[compare2[2],
+              ])
+          out2 <- hypotheses(mod, FUN = f1)
+          out2 <- cbind(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
+          colnames(out2) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
+          out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
+                                         lower.tail = TRUE) * out2[, 2]
+          out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
+                                         lower.tail = TRUE) * out2[, 2]
+          out2 <- round(out2, rounded)
+          out <- rbind(out, out2)
+        }
+      }
+      out <- data.frame(dv=names(predict(m1,type = "probs", newdata = des1[1,])),out)
     } else if (bootstrap == "no" & class(mod)[1]=="vglm" | bootstrap == "no" & class(mod)[1]=="zeroinfl" | bootstrap == "no" & class(mod)[1]=="zerotrunc" | bootstrap == "no" & class(mod)[1]=="hurdle"){
       out<-("Model not suppported with Delta method. Use bootstrapping.")
     } else if (bootstrap == "no" & class(mod)[1]=="glmerMod"){
@@ -80,7 +702,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
         out <- hypotheses(mod, FUN = f1)
         out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
         out <- as.matrix(t(out))
-        colnames(out) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
+        colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
         out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
           out[, 2]
         out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
@@ -298,7 +920,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
      class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" |
      class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" ){
 
-    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" | bootstrap == "no" & class(mod)[1]=="multinom"  |
+    if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" |
         bootstrap == "no" & class(mod)[1]=="negbin"){
       require(marginaleffects)
       if (sum(class(mod) == "lm") > 0) {
@@ -325,6 +947,21 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
       out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
         out[, 2]
       out <- round(out, rounded)
+    } else if (bootstrap == "no" & class(mod)[1]=="multinom"){
+      require(marginaleffects)
+        f1 <- function(x) (predict(x, type = "probs", newdata = design.matrix[compare[1],]) -
+                             predict(x, type = "probs", newdata = design.matrix[compare[2],])) -
+          (predict(x, type = "probs", newdata = design.matrix[compare[3],]) -
+             predict(x, type = "probs", newdata = design.matrix[compare[4],]))
+      out <- hypotheses(mod, FUN = f1)
+      out <- cbind(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      colnames(out) <- c("second.diff","std. error","statistic","p-value" ,"ll", "ul")
+      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[, 2]
+      out <- round(out, rounded)
+      out <- data.frame(dv=names(predict(m1,type = "probs", newdata = des1[1,])),out)
     } else if (bootstrap == "no" & class(mod)[1]=="glmerMod"){
       require(marginaleffects)
       f1 <- function(x) (predict(mod, type = "response",newdata = design.matrix[compare[1], ],re.form=NA) -
@@ -546,30 +1183,6 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
 
 
 
-lr.test<-function(full.model,reduced.model){
-  # "Note: It does not matter if you correctly identified the Full and Reduced Models. The function detects it based on DF.")
-  n.f <- length(predict(full.model))
-  n.r <- length(predict(reduced.model))
-  if(n.f != n.r){print("The models were not fit to the same data! WTF")}else{
-    ll.f <-as.numeric(logLik(full.model))
-    ll.r <- as.numeric( logLik(reduced.model))
-    ll <- 2*abs(ll.r-ll.f)
-    df.full <- length(coef(full.model))
-    df.reduced <- length(coef(reduced.model))
-    if(sum(class(full.model)=="negbin")>0){df.full<-df.full+1}
-    if(sum(class(reduced.model)=="negbin")>0){df.reduced<-df.reduced+1}
-    if(sum(class(full.model)=="zeroinfl" & full.model$theta>0)){df.full<-df.full+1}
-    if(sum(class(reduced.model)=="zeroinfl" & reduced.model$theta>0)){df.full<-df.full+1}
-    if (sum(class(full.model) == "zerotrunc" & full.model$dist == "negbin")) {df.full <- df.full + 1}
-    if (sum(class(full.model) == "hurdle" & full.model$dist == "negbin")) {df.full <- df.full + 1}
-    if (sum(class(reduced.model) == "zerotrunc" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
-    if (sum(class(reduced.model) == "hurdle" & reduced.model$dist == "negbin")) {df.reduced <- df.reduced + 1}
-
-    df <- abs(df.full-df.reduced)
-    p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
-    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
-                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
-    return(out)}}
 
 rubins.rule <- function(std.errors){
   r.r.std.error<-sqrt(mean(std.errors^2) + var(std.errors) + var(std.errors)/length(std.errors))
@@ -674,539 +1287,6 @@ compare.margins <- function(margins,margins.ses,seed=1234,rounded=3,nsim=10000){
 
 
 
-
-margins.des<-function (mod, ivs, excl = "nonE",data,dv="name.of.your.dependent.variable") {
-  if(sum(class(mod)=="nnet")>0){
-    c1<-as.character(mod$call)
-    require(MASS)
-    m.polr<-polr(c1[2],data=data)
-    mod<-m.polr}
-
-  if(class(mod)[1]=="lme"){
-    X5 <- mod$data # pull out all of the data
-    var.names <- names(mod$fixDF$terms) # get the names of the variables that were used
-    var.names <- var.names[-1] # remove the intercept
-    X2 <- X5[,match(var.names,colnames(X5))] # from the full data, keep only the variables in the model
-    X.mod <- X2 # rename
-    if (excl == "nonE") {}else {
-      X.mod <- X2[, -match(excl, colnames(X2))]
-      var.names <- var.names[match(colnames(X.mod), var.names)]} # If you want to remove any factor-coded variables
-
-    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # Exclude "ivs" because those are not set to their means
-    var.names <- var.names[-match(names(ivs), var.names)] # Exclude "ivs" because those are not set to their means
-    if (class(X.mod) == "numeric") {
-      controls <- mean(X.mod)
-      names(controls) <- var.names
-    }else {
-      controls <- apply(X.mod, 2, FUN = "mean")} # Set covariates to their means
-  }else if(class(mod)[1]=="glmerMod"){
-    var.names <- names(fixef(mod)) #names of variables in the model
-    var.names <- var.names[-1] #remove intercept
-    # Seems like I need to add a variable to the function that defines the DV (so I can adjust for missing data)
-    data <- data[, match(c(dv,var.names), colnames(ess))]
-    X.mod <- na.omit(data) # remove missing responses
-    X.mod <- X.mod[,-1] # Now, remove the dv from the predictors
-    if (excl == "nonE") {
-    }else {
-      X.mod <- X.mod[, -match(excl, colnames(X.mod))]
-      var.names <- var.names[match(colnames(X.mod), var.names)]
-    }
-    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # remove variables in the ivs statement
-    var.names <- var.names[-match(names(ivs), var.names)]
-    if (class(X.mod) == "numeric") {
-      controls <- mean(X.mod)
-      names(controls) <- var.names
-    }else {
-      controls <- apply(X.mod, 2, FUN = "mean")
-    }
-  }else if(class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
-    var.names <- names(fixef(mod)) #names of variables in the model
-    var.names <- var.names[-1] #remove intercept
-    # Seems like I need to add a variable to the function that defines the DV (so I can adjust for missing data)
-    data <- data[, match(c(dv,var.names), colnames(ess))]
-    X.mod <- na.omit(data) # remove missing responses
-    X.mod <- X.mod[,-1] # Now, remove the dv from the predictors
-    if (excl == "nonE") {
-    }else {
-      X.mod <- X.mod[, -match(excl, colnames(X.mod))]
-      var.names <- var.names[match(colnames(X.mod), var.names)]
-    }
-    X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))] # remove variables in the ivs statement
-    var.names <- var.names[-match(names(ivs), var.names)]
-    if (class(X.mod) == "numeric") {
-      controls <- mean(X.mod)
-      names(controls) <- var.names
-    }else {
-      controls <- apply(X.mod, 2, FUN = "mean")
-    }
-  }else if(class(mod)[1]=="clmm"){
-    X <- mod$model
-    X <- X[,-c(1,ncol(X))]
-    controls <- apply(X, 2, FUN = "mean")
-    controls <- controls[-match(names(ivs), colnames(X))]
-      }
-  else{
-  X.mod <- mod$model[, -1]
-  var.names <- colnames(X.mod)
-  if (excl == "nonE") {
-  }
-  else {
-    X.mod <- X.mod[, -match(excl, colnames(X.mod))]
-    var.names <- var.names[match(colnames(X.mod), var.names)]
-  }
-  X.mod <- X.mod[, -match(names(ivs), colnames(X.mod))]
-  var.names <- var.names[-match(names(ivs), var.names)]
-  if (class(X.mod) == "numeric") {
-    controls <- mean(X.mod)
-    names(controls) <- var.names
-  }
-  else {
-    controls <- apply(X.mod, 2, FUN = "mean")
-  }}
-
-  design <- ivs
-  design <- cbind(design, t(controls))
-  return(design)
-}
-
-
-
-margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
-                          pscl.data = data, num.sample = 1000, prop.sample = 0.9, seed = 1234) {
-  require(emmeans)
-
-  if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="polr" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
-     class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  |
-     class(mod)[1]=="clmm"  | class(mod)[1]=="lme" | class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
-
-
-  if (cumulate == "no") {
-    if (sum(class(mod) == "lm") > 0) {
-      probs <- data.frame(emmeans(mod, ~1, type = "response",
-                                  weights = "proportional", at = as.list(des[1,
-                                  ])))
-      if (nrow(des > 1)) {
-        for (i in 2:nrow(des)) {
-          probsi <- data.frame(emmeans(mod, ~1, type = "response",
-                                       weights = "proportional", at = as.list(des[i,
-                                       ])))
-          probs <- rbind(probs, probsi)
-        }
-      }
-      probs <- probs[, -c(1, 4)]
-      probs[, 3] <- probs[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 2]
-      probs[, 4] <- probs[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 2]
-      colnames(probs) <- c("fitted", "SE", "ll", "ul")
-      marginsdat <- data.frame(des, probs)
-      marginsdat <- round(marginsdat, rounded)
-    }
-    if (class(mod)[1] == "polr") {
-      probs <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[1,
-      ]), weights = "proportional", mode = "prob"))
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          probsi <- data.frame(emmeans(mod, specs=colnames(mod$model)[1], at = as.list(des[i,
-          ]), weights = "proportional", mode = "prob"))
-          probs <- rbind(probs, probsi)
-        }
-      }
-      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      colnames(probs)[5:6] <- c("ll", "ul")
-      probs <- probs[, -4]
-      probs[, 2] <- round(probs[, 2], rounded)
-      probs[, 3] <- round(probs[, 3], rounded)
-      probs[, 4] <- round(probs[, 4], rounded)
-      probs[, 5] <- round(probs[, 5], rounded)
-      des <- des[rep(1:nrow(des), each = length(table(mod$model[,1]))),
-      ]
-      des <- round(des, rounded)
-      marginsdat <- data.frame(des, probs)
-    }
-    if (class(mod)[1] == "multinom") {
-      cl <- as.character(mod$call)[2]
-      dv<-strsplit(cl," ")[[1]][1]
-      probs <- data.frame(emmeans(mod, specs=dv, at = as.list(des[1,
-      ]), weights = "proportional", mode = "prob"))
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          probsi <- data.frame(emmeans(mod, specs=dv, at = as.list(des[i,
-          ]), weights = "proportional", mode = "prob"))
-          probs <- rbind(probs, probsi)
-        }
-      }
-      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      colnames(probs)[5:6] <- c("ll", "ul")
-      probs <- probs[, -4]
-      probs[, 2] <- round(probs[, 2], rounded)
-      probs[, 3] <- round(probs[, 3], rounded)
-      probs[, 4] <- round(probs[, 4], rounded)
-      probs[, 5] <- round(probs[, 5], rounded)
-      des <- des[rep(1:nrow(des), each = length(mod$lev)),
-      ]
-      des <- round(des, rounded)
-      marginsdat <- data.frame(des, probs)
-    }
-
-
-
-    if (class(mod)[1] == "vglm") {
-      preds <- predict(mod, newdata = des[1, ], type = "link",
-                       se.fit = TRUE)
-      pdes <- des[rep(1, each = length(preds$fitted.values) +
-                        1), ]
-      pdes <- round(pdes, rounded)
-      pdes <- data.frame(pdes, dv = 1:(length(preds$fitted.values) +
-                                         1), c(t(preds$fitted.values), NA), c(t(preds$se.fit),
-                                                                              NA))
-      colnames(pdes)[(ncol(pdes) - 1):ncol(pdes)] <- c("fitted",
-                                                       "se")
-      pdes <- mutate(pdes, pr = plogis(fitted), ll = plogis(fitted -
-                                                              qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
-                     ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-                                   se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
-      pdes <- pdes[, -match(c("fitted", "se", "ll", "ul"),
-                            colnames(pdes))]
-      pdes <- mutate(pdes, prob = NA)
-      pdes$prob[1] <- pdes$pr[1]
-      pdes$prob[nrow(pdes)] <- 1 - pdes$pr[nrow(pdes) -
-                                             1]
-      for (i in 2:(nrow(pdes) - 1)) {
-        pdes$prob[i] <- pdes$pr[i] - pdes$pr[i - 1]
-      }
-      pdes <- mutate(pdes, se = NA)
-      pdes$se[1] <- pdes$SE[1]
-      pdes$se[nrow(pdes)] <- pdes$SE[nrow(pdes) - 1]
-      for (i in 2:(nrow(pdes) - 1)) {
-        pdes$se[i] <- rubins.rule(c(pdes$SE[i], pdes$SE[i]))
-      }
-      pdes <- pdes[, -match(c("pr", "SE"), colnames(pdes))]
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          predsi <- predict(mod, newdata = des[i, ],
-                            type = "link", se.fit = TRUE)
-          pdesi <- des[rep(i, each = length(predsi$fitted.values) +
-                             1), ]
-          pdesi <- data.frame(pdesi, dv = 1:(length(predsi$fitted.values) +
-                                               1), c(t(predsi$fitted.values), NA), c(t(predsi$se.fit),
-                                                                                     NA))
-          colnames(pdesi)[(ncol(pdesi) - 1):ncol(pdesi)] <- c("fitted",
-                                                              "se")
-          pdesi <- mutate(pdesi, pr = plogis(fitted),
-                          ll = plogis(fitted - qnorm(1 - (alpha/2),
-                                                     lower.tail = TRUE) * se), ul = plogis(fitted +
-                                                                                             qnorm(1 - (alpha/2), lower.tail = TRUE) *
-                                                                                             se), SE = (pr - ll)/qnorm(1 - (alpha/2)))
-          pdesi <- pdesi[, -match(c("fitted", "se", "ll",
-                                    "ul"), colnames(pdesi))]
-          pdesi <- mutate(pdesi, prob = NA)
-          pdesi$prob[1] <- pdesi$pr[1]
-          pdesi$prob[nrow(pdesi)] <- 1 - pdesi$pr[nrow(pdesi) -
-                                                    1]
-          for (i in 2:(nrow(pdesi) - 1)) {
-            pdesi$prob[i] <- pdesi$pr[i] - pdesi$pr[i -
-                                                      1]
-          }
-          pdesi <- mutate(pdesi, se = NA)
-          pdesi$se[1] <- pdesi$SE[1]
-          pdesi$se[nrow(pdesi)] <- pdesi$SE[nrow(pdesi) -
-                                              1]
-          for (i in 2:(nrow(pdesi) - 1)) {
-            pdesi$se[i] <- rubins.rule(c(pdesi$SE[i],
-                                         pdesi$SE[i]))
-          }
-          pdesi <- pdesi[, -match(c("pr", "SE"), colnames(pdesi))]
-          pdes <- rbind(pdes, pdesi)
-        }
-      }
-      pdes <- mutate(pdes, ll = prob - qnorm(1 - (alpha/2),
-                                             lower.tail = TRUE) * se, ul = prob + qnorm(1 -
-                                                                                          (alpha/2), lower.tail = TRUE) * se)
-      pdes <- mutate(pdes, prob = round(prob, rounded),
-                     se = round(se, rounded), ll = round(ll, rounded),
-                     ul = round(ul, rounded))
-      marginsdat <- pdes
-    }
-    if (class(mod)[1] == "zeroinfl") {
-      p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
-      ]), mode = "count", data = pscl.data))
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
-          ]), mode = "count", data = pscl.data))
-          p1 <- rbind(p1, pi)
-        }
-      }
-      p1 <- p1[, c(2, 3)]
-      colnames(p1)[1] <- "fitted"
-      marginsdat <- cbind(des, p1)
-      marginsdat <- mutate(marginsdat, ll = fitted - qnorm(1 -
-                                                             (alpha/2), lower.tail = TRUE) * SE, ul = fitted +
-                             qnorm(1 - (alpha/2), lower.tail = TRUE) * SE)
-      marginsdat <- round(marginsdat, rounded)
-    }
-    if (class(mod)[1] == "zerotrunc") {
-      fitted <- predict(mod,newdata=des[1,])
-      if(nrow(des)>1){for(i in 2:nrow(des)){
-        fittedi <- predict(mod,newdata=des[i,])
-        fitted<-c(fitted,fittedi)}}
-
-      p1.model<-mod$model
-      p1.dist <-matrix(NA,nr=num.sample,nc=length(fitted))
-
-
-      for(i in 1:num.sample){
-        set.seed(1982 + i);  p1.model2 <- p1.model[sample(1:nrow(p1.model),round(prop.sample*nrow(p1.model),0),replace=TRUE),]
-        p1.mod <- zerotrunc(mod$formula,data=p1.model2,dist=mod$dist)
-        fitted.boot <- predict(p1.mod,newdata=des[1,])
-        if(nrow(des)>1){for(j in 2:nrow(des)){
-          fittedi <- predict(p1.mod,newdata=des[j,])
-          fitted.boot<-c(fitted.boot,fittedi)}}
-        p1.dist[i,]<-fitted.boot}
-
-      p1.dist[,1]<-sort(p1.dist[,1])
-      if(ncol(p1.dist)>1){for(i in 2:ncol(p1.dist)){
-        p1.dist[,i]<-sort(p1.dist[,i])}}
-      se <- apply(p1.dist,2,FUN="sd")
-      marginsdat<-data.frame(round(des,rounded),fitted=round(fitted,rounded),
-                             se=round(se,rounded),
-                             ll=round(p1.dist[nrow(p1.dist)*(alpha/2),],rounded),
-                             ul=round(p1.dist[nrow(p1.dist)*(1-(alpha/2)),],rounded))
-
-    }
-
-    if (class(mod)[1] == "hurdle") {
-      p1 <- data.frame(emmeans(mod, ~1, at = as.list(des[1,
-      ]), mode = "response"))[2:3]
-      if (nrow(des > 1)) {
-        for (i in 2:nrow(des)) {
-          pi <- data.frame(emmeans(mod, ~1, at = as.list(des[i,
-          ]), mode = "response"))[2:3]
-          p1 <- rbind(p1, pi)
-        }
-      }
-      ll <- p1$emmean - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      ul <- p1$emmean + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      marginsdat <- data.frame(round(des, rounded), fitted = round(p1$emmean,
-                                                                   rounded), se = round(p1$SE, rounded), ll = round(ll,
-                                                                                                                    rounded), ul = round(ul, rounded))
-    }
-
-    if (class(mod)[1] == "lme") {
-      p1 <- data.frame(emmeans(mod, ~1, type = "response",
-                               weights = "proportional", at = as.list(des[1,])))[2:3]
-      if (nrow(des > 1)) {
-        for (i in 2:nrow(des)) {
-          pi <- data.frame(emmeans(mod, ~1, type = "response",
-                                   weights = "proportional", at = as.list(des[i,])))[2:3]
-          p1 <- rbind(p1, pi)
-        }
-      }
-      ll <- p1$emmean - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      ul <- p1$emmean + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      marginsdat <- data.frame(round(des, rounded), fitted = round(p1$emmean,
-                                                                   rounded), se = round(p1$SE, rounded), ll = round(ll,
-                                                                   rounded), ul = round(ul, rounded))
-
-    }
-
-     if (class(mod)[1] == "glmerMod") {
-      p1 <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[1,])))
-      if (nrow(des > 1)) {
-        for (i in 2:nrow(des)) {
-          pi <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[i,])))
-          p1 <- rbind(p1, pi)
-        }
-      }
-      ll <- p1[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      ul <- p1[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      marginsdat <- data.frame(round(des, rounded), fitted = round(p1[,2],rounded), se = round(p1[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
-     }
-    if (class(mod)[1]=="lmerModLmerTest" | class(mod)[1]=="lmerMod"){
-      p1 <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[1,])))
-      if (nrow(des > 1)) {
-        for (i in 2:nrow(des)) {
-          pi <- data.frame(emmeans(mod, ~1, type = "response",weights = "proportional", at = as.list(des[i,])))
-          p1 <- rbind(p1, pi)
-        }
-      }
-      ll <- p1[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      ul <- p1[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        p1$SE
-      marginsdat <- data.frame(round(des, rounded), fitted = round(p1[,2],rounded), se = round(p1[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
-    }
-    if (class(mod)[1] == "clmm") {
-      out <- data.frame(emmeans(mod,~dv,mode="prob",at=as.list(des[1,])))
-      if(nrow(des) >1){for(i in 2:nrow(des)){
-        out2 <- data.frame(emmeans(mod,~dv,mode="prob",at=as.list(des[i,])))
-        out <- rbind(out,out2)}}
-      ll <- out[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out$SE
-      ul <- out[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out$SE
-      marginsdat <- data.frame(des,dv.level = out[,1], fitted = round(out[,2],rounded), se = round(out[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
-    }
-  }
-  else {
-    if (class(mod) == "polr") {
-      probs <- data.frame(emmeans(mod, ~cut, at = as.list(des[1,
-      ]), weights = "proportional", mode = "cum.prob"))
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          probsi <- data.frame(emmeans(mod, ~cut, at = as.list(des[i,
-          ]), weights = "proportional", mode = "cum.prob"))
-          probs <- rbind(probs, probsi)
-        }
-      }
-      probs[, 5] <- probs[, 2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      probs[, 6] <- probs[, 2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        probs[, 3]
-      colnames(probs)[5:6] <- c("ll", "ul")
-      probs <- probs[, -4]
-      probs[, 2] <- round(probs[, 2], rounded)
-      probs[, 3] <- round(probs[, 3], rounded)
-      probs[, 4] <- round(probs[, 4], rounded)
-      probs[, 5] <- round(probs[, 5], rounded)
-      des <- des[rep(1:nrow(des), each = length(table(mod$model[,
-                                                                1])) - 1), ]
-      des <- round(des, rounded)
-      marginsdat <- data.frame(des, probs)
-    }
-    if (class(mod) == "vglm") {
-      preds <- predict(mod, newdata = des[1, ], type = "link",
-                       se.fit = TRUE)
-      pdes <- des[rep(1, each = length(preds$fitted.values)),
-      ]
-      pdes <- round(pdes, rounded)
-      pdes <- data.frame(pdes, colnames(preds$fitted.values),
-                         t(preds$fitted.values), t(preds$se.fit))
-      colnames(pdes)[(ncol(pdes) - 2):ncol(pdes)] <- c("dv",
-                                                       "fitted", "se")
-      if (nrow(des) > 1) {
-        for (i in 2:nrow(des)) {
-          predsi <- predict(mod, newdata = des[i, ],
-                            type = "link", se.fit = TRUE)
-          pdesi <- des[rep(i, each = length(predsi$fitted.values)),
-          ]
-          pdesi <- round(pdesi, rounded)
-          pdesi <- data.frame(pdesi, colnames(preds$fitted.values),
-                              t(predsi$fitted.values), t(predsi$se.fit))
-          colnames(pdesi)[(ncol(pdesi) - 2):ncol(pdesi)] <- c("dv",
-                                                              "fitted", "se")
-          pdes <- rbind(pdes, pdesi)
-        }
-      }
-      pdes <- mutate(pdes, prob = plogis(fitted), ll = plogis(fitted -
-                                                                qnorm(1 - (alpha/2), lower.tail = TRUE) * se),
-                     ul = plogis(fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-                                   se), SE = (prob - ll)/qnorm(1 - (alpha/2)))
-      pdes <- pdes[, -match(c("fitted", "se"), colnames(pdes))]
-      pdes <- mutate(pdes, prob = round(prob, rounded),
-                     SE = round(SE, rounded), ll = round(ll, rounded),
-                     ul = round(ul, rounded))
-      marginsdat <- pdes
-    }
-    if (class(mod)[1] == "clmm") {
-      out <- data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(des[1,])))
-      if(nrow(des) >1){for(i in 2:nrow(des)){
-        out2 <- data.frame(emmeans(mod,~cut,mode="cum.prob",at=as.list(des[i,])))
-        out <- rbind(out,out2)}}
-      ll <- out[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out$SE
-      ul <- out[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out$SE
-      marginsdat <- data.frame(round(des, rounded),cut=out[,1], fitted = round(out[,2],rounded), se = round(out[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
-    }
-  }
-  colnames(marginsdat)[match("SE", colnames(marginsdat))] <- "se"
-  return(marginsdat)
-} else {print("Model type not supported.")}}
-
-
-
-
-margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample = 1000,
-                                prop.sample = 0.9, alpha = 0.05, seed = 1234, rounded = 3) {
-  require(tidyverse)
-  require(MASS)
-  if(class(mod)=="clogistic"){
-    coefs <- as.numeric(na.omit(coef(mod)))
-    des <- mutate(design.matrix, lp = exp(as.matrix(design.matrix) %*%
-                                            coefs), probs = lp/sum(lp))
-    sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
-    vcovc <- vcov(mod)
-    sl <- which(is.na(coef(mod)))
-    if (length(sl) > 0) {
-      vcovc <- vcovc[-sl, -sl]
-    }
-    for (i in 1:num.sample) {
-      set.seed(seed + i)
-      lp <- exp(as.matrix(design.matrix) %*% mvrnorm(mu = coefs,
-                                                     Sigma = vcovc))
-      sims[i, ] <- lp/sum(lp)
-    }
-    sims <- apply(sims, 2, FUN = "sort")
-    des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
-                                                                       alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
-    out <- round(des, rounded)
-    if (run.boot == "yes") {
-      boot.dist <- matrix(NA, nr = num.sample, nc = nrow(des))
-      for (i in 1:num.sample) {
-        set.seed(seed + i)
-        mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
-                                                            nrow(mod$model), 0), replace = FALSE), ]
-        m.1 <- clogistic(mod$formula, strata = `(strata)`,
-                         data = mod2)
-        coefs2 <- as.numeric(na.omit(coef(m.1)))
-        design20 <- mutate(des, lp = exp(as.matrix(design.matrix) %*%
-                                           coefs2), probs = lp/sum(lp))
-        boot.dist[i, ] <- design20[, ncol(design20)]
-      }
-      boot.dist[, 1] <- sort(boot.dist[, 1])
-      if (ncol(boot.dist) > 1) {
-        for (i in 2:ncol(boot.dist)) {
-          boot.dist[, i] <- sort(boot.dist[, i])
-        }
-      }
-      lower.limit <- boot.dist[nrow(boot.dist) * (alpha/2),
-      ]
-      upper.limit <- boot.dist[nrow(boot.dist) * (1 - (alpha/2)),
-      ]
-      des <- round(mutate(des, ll.boot = lower.limit, ul.boot = upper.limit),
-                   rounded)
-      out <- list(des = des, boot.dist = boot.dist)
-    }
-    return(out)} else if(class(mod)=="mlogit"){
-      des <- mutate(design.matrix, probs= predict(mod,newdata=design.matrix))
-      require(MASS)
-      m2 <- mod
-      sims <- matrix(NA, ncol = nrow(design.matrix), nrow = num.sample)
-      vcovc <- vcov(mod)
-      for (i in 1:num.sample) {
-        set.seed(seed + i)
-        m2$coefficients <- mvrnorm(mu = coef(mod), Sigma = vcov(mod))
-        sims[i, ] <- predict(m2,newdata=design.matrix)}
-      sims <- apply(sims, 2, FUN = "sort")
-      des <- mutate(des, ll = sims[alpha/2 * nrow(sims), ], ul = sims[(1 -
-                                                                         alpha/2) * nrow(sims), ], se = apply(sims, 2, FUN = "sd"))
-      out <- round(des, rounded)
-      return(out)
-    } else{print("Model type is not supported.")}}
 
 
 # Take a Poisson model object of the count process.

@@ -6,6 +6,7 @@
 }
 \description{
 Given two model objects estimated with a logLik() solution, the function computes an LR test. The order of models, in terms of full or reduced, does not matter.
+Supported models include OLS regression via lm, logistic regression via glm, Poisson regression via glm, negative binomial regression via MASS:glm.nb, ordinal logistic regression via MASS::polr, partial proportional odds models via vgam::vglm, multinomial logistic regression via nnet::multinom, zero-inflated Poisson or negative binomial regression via pscl::zeroinfl, zero-truncated Poisson or negative binomial regression via countreg::zerotrunc, and hurdle Poisson or negative binomial regression via pscl::hurdle. For mixed models, use base R's anova function.
 }
 \usage{
 lr.test(full.model,reduced.model)
