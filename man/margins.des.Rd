@@ -11,7 +11,8 @@ Supported models include OLS via the lm function, logistic and Poisson regressio
 
 For multinomial regression model, as estimated via the nnet package, you need to provide the data used in the nnet function that defined the model.
 For partial proportional odds models, as estimated via the vgam package, you need to specify an ordinal model via MASS::polr and provide that model to the margins.des function (the data for the model are not part of a vgam object.)
-For mixed effects logistic, Poisson, or negative binomial regression models, as estimated by lme4/lmerTest, you need to provide the data used in the glmer function that defined the model.}
+For mixed effects logistic, Poisson, or negative binomial regression models, as estimated by lme4/lmerTest, you need to provide the data used in the glmer function that defined the model.
+For mixed effects ordinal logistic regression models, as estimated via the ordinal package, the outcome variable in the regression model (i.e., the clmm function) needs to be named "dv."}
 \usage{
 margins.des(mod,ivs,excl="nonE",data)}
 \arguments{

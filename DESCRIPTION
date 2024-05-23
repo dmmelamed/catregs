@@ -1,10 +1,10 @@
 Package: catregs
 Type: Package
 Title: Post-estimation functions for Generalized Linear Mixed Models.
-Version: 0.1.2
+Version: 0.1.3
 Author: David Melamed
 Maintainer: The package maintainer <dmmelamed@gmail.com>
-Description: Several useful functions for (mixed effects) regression models with limited dependent variables. 
+Description: Several functions for (mixed effects) regression models with limited dependent variables. 
 Depends:
 License: What license is it under?
 Encoding: UTF-8

@@ -7,7 +7,7 @@ lr.test<-function(full.model,reduced.model){
 
   n.f <- length(predict(full.model))
   n.r <- length(predict(reduced.model))
-  if(n.f != n.r){print("The models were not fit to the same data! WTF")}else if (class(full.model)[1]=="vglm"){
+  if(n.f != n.r){print("The models were not fit to the same data!")}else if (class(full.model)[1]=="vglm"){
     ll.f <-as.numeric(logLik(full.model))
     ll.r <- as.numeric( logLik(reduced.model))
     ll <- 2*abs(ll.r-ll.f)
@@ -15,9 +15,9 @@ lr.test<-function(full.model,reduced.model){
     df.reduced <- length(coef(reduced.model))
     df <- abs(df.full-df.reduced)
     p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
-    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
-                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
-
+    out <- c(ll.f,ll.r,ll,df,p.value)
+    names(out) <- c("LL Full","LL Reduced","LR Statistic","DF","p-value")
+    out <- as.data.frame(t(out))
   } else{
     ll.f <-as.numeric(logLik(full.model))
     ll.r <- as.numeric( logLik(reduced.model))
@@ -35,8 +35,10 @@ lr.test<-function(full.model,reduced.model){
 
     df <- abs(df.full-df.reduced)
     p.value <- round(pchisq(ll,df,lower.tail=FALSE),5)
-    out <- data.frame("LL Full"=ll.f,"LL Reduced"=ll.r,
-                      "G2/LR Statistic"=ll,"DF"=df,"p-value"=p.value)
+    out <- c(ll.f,ll.r,ll,df,p.value)
+    names(out) <- c("LL Full","LL Reduced","LR Statistic","DF","p-value")
+    out <- as.data.frame(t(out))
+    rownames(out) <- ""
   }
     return(out)} else {print("Model type not supported.")}}
 
@@ -583,6 +585,18 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
     } else{print("Model type is not supported.")}}
 
 
+compare.margins <- function(margins,margins.ses,seed=1234,rounded=3,nsim=10000){
+  difference <- margins[1] - margins[2]
+  if(difference>0){
+    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins[1],sd=margins.ses[1]) - rnorm(nsim,mean=margins[2],sd=margins.ses[2])) < 0) /nsim
+  }else{
+    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins[1],sd=margins.ses[1]) - rnorm(nsim,mean=margins[2],sd=margins.ses[2])) > 0) /nsim
+  }
+  out <- c(difference,p.value)
+  names(out) <- c("Difference","p-value")
+  out <- as.data.frame(t(out))
+  return(out)
+}
 
 
 
@@ -590,11 +604,11 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
                                bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                seed = 1234,cum.probs="no")  {
 
-if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  | class(mod)[1]=="lme" |
+if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | class(mod)[1]=="vglm"  |
   class(mod)[1]=="negbin" | class(mod)[1]=="zeroinfl" | class(mod)[1]=="zerotrunc" | class(mod)[1]=="hurdle" | class(mod)[1]=="glmerMod"  | class(mod)[1]=="clmm" | class(mod)[1]=="polr"){
 
     if (bootstrap == "no" & class(mod)[1]=="lm" | bootstrap == "no" & class(mod)[1]=="glm" |
-        bootstrap == "no" & class(mod)[1]=="negbin"){
+        bootstrap == "no" & class(mod)[1]=="negbin" | bootstrap == "no" & class(mod)[1]=="lme"){
       require(marginaleffects)
 
       des1 <- design.matrix[compare[1:2], ]
@@ -605,19 +619,20 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
         ])
       }
       else {
-        f1 <- function(x) predict(x, type = "probs", newdata = des1[1,
-        ]) - predict(x, type = "probs", newdata = des1[2,
+        f1 <- function(x) predict(x, type = "response", newdata = des1[1,
+        ]) - predict(x, type = "response", newdata = des1[2,
         ])
       }
-      out <- hypotheses(mod, FUN = f1)
+      out <- hypotheses(mod,f1)
       out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out[5] <- out[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      out[6] <- out[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
       out <- as.matrix(t(out))
-      colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
       out <- round(out, rounded)
+      out <- as.data.frame(out)
       if (sum(class(mod) == "nnet") == 1) {
         out <- cbind(out, levels(f2[nrow(design.matrix)/2,
                                     ncol(design.matrix) + 1]))
@@ -638,20 +653,21 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
               ])
           }
           else {
-            f1 <- function(x) predict(x, type = "probs",
+            f1 <- function(x) predict(x, type = "response",
                                       newdata = design.matrix[compare2[1], ]) -
-              predict(x, type = "probs", newdata = design.matrix[compare2[2],
+              predict(x, type = "response", newdata = design.matrix[compare2[2],
               ])
           }
-          out2 <- hypotheses(mod, FUN = f1)
+          out2 <- hypotheses(mod,f1)
           out2 <- c(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
-          out2<-as.matrix(t(out2))
-          colnames(out2) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
-          out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
-          out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
+          out2[5] <- out2[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[2]
+          out2[6] <- out2[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[2]
+          names(out2) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+          out2 <- as.matrix(t(out2))
           out2 <- round(out2, rounded)
+          out2 <- as.data.frame(out2)
           if (sum(class(mod) == "nnet") == 1) {
             out2 <- cbind(out2, levels(f2[nrow(design.matrix)/2,
                                           ncol(design.matrix) + 1]))
@@ -664,13 +680,13 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
       require(marginaleffects)
       des1 <- design.matrix[compare[1:2], ]
       f1 <- function(x) predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])
-      out <- hypotheses(mod, FUN = f1)
-      out <- cbind(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
-      colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
+      out <- hypotheses(mod,f1)
+      out <- data.frame(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out[,5] <- out[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[,2]
+      out[,6] <- out[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[,2]
+      names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
       out <- round(out, rounded)
       if (length(compare) > 2) {
         lc <- length(compare)/2
@@ -682,32 +698,35 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
                                       newdata = design.matrix[compare2[1], ]) -
               predict(x, type = "probs", newdata = design.matrix[compare2[2],
               ])
-          out2 <- hypotheses(mod, FUN = f1)
-          out2 <- cbind(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
-          colnames(out2) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
-          out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
-          out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
+          out2 <- hypotheses(mod,f1)
+          out2 <- data.frame(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
+          out2[,5] <- out2[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[,2]
+          out2[,6] <- out2[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[,2]
+          names(out2) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
           out2 <- round(out2, rounded)
           out <- rbind(out, out2)
         }
       }
       out <- data.frame(dv=names(predict(m1,type = "probs", newdata = des1[1,])),out)
+      names(out) <- c("Outcome Level","First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+
     } else if (bootstrap == "no" & class(mod)[1]=="vglm" | bootstrap == "no" & class(mod)[1]=="zeroinfl" | bootstrap == "no" & class(mod)[1]=="zerotrunc" | bootstrap == "no" & class(mod)[1]=="hurdle"){
       out<-("Model not suppported with Delta method. Use bootstrapping.")
     } else if (bootstrap == "no" & class(mod)[1]=="glmerMod"){
         require(marginaleffects)
         f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare[1],],re.form=NA) - predict(x, type = "response", newdata = design.matrix[compare[2],],re.form=NA)
-        out <- hypotheses(mod, FUN = f1)
+        out <- hypotheses(mod,f1)
         out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+        out[5] <- out[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[2]
+        out[6] <- out[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[2]
+        names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
         out <- as.matrix(t(out))
-        colnames(out) <- c("first.diff","std.error","statistic","p-value" ,"ll", "ul")
-        out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out[, 2]
-        out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out[, 2]
         out <- round(out, rounded)
+        out <- as.data.frame(out)
         if (length(compare) > 2) {
           lc <- length(compare)/2
           coms <- seq(1, length(compare), 2)
@@ -716,29 +735,32 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
             compare2 <- compare[coms[j]:(coms[j] + 1)]
             f1 <- function(x) predict(x, type = "response", newdata = design.matrix[compare2[1],],re.form=NA) - predict(x, type = "response", newdata = design.matrix[compare2[2],],re.form=NA)
 
-            out2 <- hypotheses(mod, FUN = f1)
+            out2 <- hypotheses(mod,f1)
             out2 <- c(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
-            out2<-as.matrix(t(out2))
-            colnames(out2) <- c("first.diff","std. error","statistic","p-value" ,"ll", "ul")
-            out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
-                                           lower.tail = TRUE) * out2[, 2]
-            out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
-                                           lower.tail = TRUE) * out2[, 2]
+            out2[5] <- out2[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+              out2[2]
+            out2[6] <- out2[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+              out2[2]
+            names(out2) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+            out2 <- as.matrix(t(out2))
+            out2 <- round(out2, rounded)
+            out2 <- as.data.frame(out2)
             out <- rbind(out, out2)}
         }
-        out <- round(out,rounded)
     }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="no"){
       require(marginaleffects)
       des1 <- design.matrix[compare[1:2], ]
       f1 <- function(x) predict(x, type = "probs", newdata = des1[1,
       ]) - predict(x, type = "probs", newdata = des1[2,
       ])
-      out <- hypotheses(mod, FUN = f1)
-      out <- data.frame(first.diff=out$estimate,std.error=out$std.error,statistic=out$statistic,p.value=out$p.value,ll=out$conf.low,ul=out$conf.high)
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
+      out <- hypotheses(mod,f1)
+      out <- data.frame(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out[,5] <- out[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[,2]
+      out[,6] <- out[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[,2]
+      names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+      out <- round(out, rounded)
       if (length(compare) > 2) {
         lc <- length(compare)/2
         coms <- seq(1, length(compare), 2)
@@ -746,17 +768,20 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
         for (j in 1:(lc - 1)) {
           compare2 <- compare[coms[j]:(coms[j] + 1)]
           f1 <- function(x) predict(x, type = "probs", newdata = design.matrix[compare2[1],]) - predict(x, type = "probs", newdata = design.matrix[compare2[2],])
-          out2 <- hypotheses(mod, FUN = f1)
-          out2 <- data.frame(first.diff=out2$estimate,std.error=out2$std.error,statistic=out2$statistic,p.value=out2$p.value,ll=out2$conf.low,ul=out2$conf.high)
-          out2[, 5] <- out2[, 1] - qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
-          out2[, 6] <- out2[, 1] + qnorm(1 - (alpha/2),
-                                         lower.tail = TRUE) * out2[, 2]
+          out2 <- hypotheses(mod,f1)
+          out2 <- data.frame(out2$estimate,out2$std.error,out2$statistic,out2$p.value,out2$conf.low,out2$conf.high)
+          out2[,5] <- out2[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[,2]
+          out2[,6] <- out2[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+            out2[,2]
+          names(out2) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+          out2 <- round(out2, rounded)
           out <- rbind(out, out2)
           }
       }
-      out <- round(out,rounded)
       out <- data.frame(outcome.level=mod$lev,out)
+      names(out) <- c("Outcome Level","First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+
     }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="yes"){
       out <- print("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
     }
@@ -795,15 +820,15 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(sd(fd.dist),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(class(mod)[1]=="polr"){
         des1 <- design.matrix[compare[1:2], ]
-        obs.diff<- predict(mod, type = "probs", newdata = des1[1,]) -
-          predict(mod, type = "probs", newdata = des1[2,])
+        obs.diff<- predict(mod, type = "response", newdata = des1[1,]) -
+          predict(mod, type = "response", newdata = des1[2,])
         fd.model<-mod$model
         fd.dist <-matrix(NA,nr=num.sample,nc=length(obs.diff))
         for(i in 1:num.sample){
           set.seed(seed + i);  fd.model2 <- fd.model[sample(1:nrow(fd.model),round(prop.sample*nrow(fd.model),0),replace=TRUE),]
           fd.modi <-polr(formula(mod),data=fd.model2, Hess=TRUE)
-          obs.diffi<- predict(fd.modi, type = "probs", newdata = des1[1,]) -
-            predict(fd.modi, type = "probs", newdata = des1[2,])
+          obs.diffi<- predict(fd.modi, type = "response", newdata = des1[1,]) -
+            predict(fd.modi, type = "response", newdata = des1[2,])
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
@@ -820,6 +845,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("First Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="vglm"){
         out <- ("Partial proportional odds model not suppported in a general way. An example is provided in the following script: [first.diff.fitted.partial.prop.odds.e.g.r]")
       } else if(class(mod)[1]=="negbin"){
@@ -850,6 +876,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("First Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="zerotrunc") {
         des1 <- design.matrix[compare[1:2], ]
         obs.diff<- predict(mod, type = "response", newdata = des1[1,]) -
@@ -864,6 +891,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("First Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="hurdle") {
         des1 <- design.matrix[compare[1:2], ]
         obs.diff<- predict(mod, type = "response", newdata = des1[1,]) -
@@ -878,6 +906,7 @@ if(class(mod)[1]=="lm" | class(mod)[1]=="glm" | class(mod)[1]=="multinom" | clas
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("First Difference","SD of the distribution","ll.boot","ul.boot")
       }  else if(class(mod)=="clmm" & cum.probs=="no"){
         obs.diff<- data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[1],])))$prob -
           data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[2],])))$prob
@@ -932,64 +961,69 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
                                                                                     ]))
       }
       else {
-        f1 <- function(x) (predict(x, type = "probs", newdata = design.matrix[compare[1],
-        ]) - predict(x, type = "probs", newdata = design.matrix[compare[2],
-        ])) - (predict(x, type = "probs", newdata = design.matrix[compare[3],
-        ]) - predict(x, type = "probs", newdata = design.matrix[compare[4],
+        f1 <- function(x) (predict(x, type = "response", newdata = design.matrix[compare[1],
+        ]) - predict(x, type = "response", newdata = design.matrix[compare[2],
+        ])) - (predict(x, type = "response", newdata = design.matrix[compare[3],
+        ]) - predict(x, type = "response", newdata = design.matrix[compare[4],
         ]))
       }
-      out <- hypotheses(mod, FUN = f1)
+      out <- hypotheses(mod,f1)
       out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out[5] <- out[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      out[6] <- out[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      names(out) <- c("Second Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
       out <- as.matrix(t(out))
-      colnames(out) <- c("second.diff","std. error","statistic","p-value" ,"ll", "ul")
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
       out <- round(out, rounded)
+      out <- as.data.frame(out)
     } else if (bootstrap == "no" & class(mod)[1]=="multinom"){
       require(marginaleffects)
         f1 <- function(x) (predict(x, type = "probs", newdata = design.matrix[compare[1],]) -
                              predict(x, type = "probs", newdata = design.matrix[compare[2],])) -
           (predict(x, type = "probs", newdata = design.matrix[compare[3],]) -
              predict(x, type = "probs", newdata = design.matrix[compare[4],]))
-      out <- hypotheses(mod, FUN = f1)
-      out <- cbind(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
-      colnames(out) <- c("second.diff","std. error","statistic","p-value" ,"ll", "ul")
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out <- round(out, rounded)
-      out <- data.frame(dv=names(predict(m1,type = "probs", newdata = des1[1,])),out)
+        out <- hypotheses(mod,f1)
+        out <- data.frame(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+        out[,5] <- out[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[,2]
+        out[,6] <- out[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[,2]
+        names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+        out <- round(out, rounded)
+        out <- data.frame(dv=names(predict(mod,type = "probs", newdata = design.matrix[1,])),out)
+        names(out) <- c("Outcome Level","First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
+
     } else if (bootstrap == "no" & class(mod)[1]=="glmerMod"){
       require(marginaleffects)
       f1 <- function(x) (predict(mod, type = "response",newdata = design.matrix[compare[1], ],re.form=NA) -
                            predict(mod,type = "response", newdata = design.matrix[compare[2],],re.form=NA)) -
         (predict(mod, type = "response", newdata = design.matrix[compare[3],],re.form=NA) -
            predict(x, type = "response", newdata = design.matrix[compare[4], ],re.form=NA))
-      out <- hypotheses(mod, FUN = f1)
+      out <- hypotheses(mod,f1)
       out <- c(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+      out[5] <- out[1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      out[6] <- out[1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+        out[2]
+      names(out) <- c("First Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
       out <- as.matrix(t(out))
-      colnames(out) <- c("second.diff","std. error","statistic","p-value" ,"ll", "ul")
-      out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
-      out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-        out[, 2]
       out <- round(out, rounded)
-      }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="no"){
+      out <- as.data.frame(out)
+    }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="no"){
         require(marginaleffects)
         des1 <- design.matrix[compare[1:4], ]
         f1 <- function(x) (predict(x, type = "probs", newdata = des1[1,]) - predict(x, type = "probs", newdata = des1[2,])) -
           (predict(x, type = "probs", newdata = des1[3,]) - predict(x, type = "probs", newdata = des1[4,]))
-        out <- hypotheses(mod, FUN = f1)
-        out <- data.frame(second.diff=out$estimate,std.error=out$std.error,statistic=out$statistic,p.value=out$p.value,ll=out$conf.low,ul=out$conf.high)
-        out[, 5] <- out[, 1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out[, 2]
-        out[, 6] <- out[, 1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out[, 2]
-        out <- round(out,rounded)
+        out <- hypotheses(mod,f1)
+        out <- data.frame(out$estimate,out$std.error,out$statistic,out$p.value,out$conf.low,out$conf.high)
+        out[,5] <- out[,1] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[,2]
+        out[,6] <- out[,1] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
+          out[,2]
+        out <- round(out, rounded)
         out <- data.frame(outcome.level=mod$lev,out)
+        names(out) <- c("Outcome Level","Second Difference","Standard Error","Statistic","p-value" ,"ll", "ul")
 
               }else if (bootstrap == "no" & class(mod)[1]=="polr" & cum.probs=="yes"){
                 out <- print("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
@@ -1036,18 +1070,18 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
       } else if(class(mod)[1]=="polr"){
 
         des1 <- design.matrix[compare[1:4], ]
-        obs.diff<- (predict(mod, type = "probs", newdata = des1[1,]) -
-                      predict(mod, type = "probs", newdata = des1[2,])) - (predict(mod, type = "probs", newdata = des1[3,]) -
-                                                                             predict(mod, type = "probs", newdata = des1[4,]))
+        obs.diff<- (predict(mod, type = "response", newdata = des1[1,]) -
+                      predict(mod, type = "response", newdata = des1[2,])) - (predict(mod, type = "response", newdata = des1[3,]) -
+                                                                             predict(mod, type = "response", newdata = des1[4,]))
 
         fd.model<-mod$model
         fd.dist <-matrix(NA,nr=num.sample,nc=length(obs.diff))
         for(i in 1:num.sample){
           set.seed(seed + i);  fd.model2 <- fd.model[sample(1:nrow(fd.model),round(prop.sample*nrow(fd.model),0),replace=TRUE),]
           fd.modi <-polr(formula(mod),data=fd.model2, Hess=TRUE)
-          obs.diffi<- (predict(fd.modi, type = "probs", newdata = des1[1,]) -
-                         predict(fd.modi, type = "probs", newdata = des1[2,])) - (predict(fd.modi, type = "probs", newdata = des1[3,]) -
-                                                                                    predict(fd.modi, type = "probs", newdata = des1[4,]))
+          obs.diffi<- (predict(fd.modi, type = "response", newdata = des1[1,]) -
+                         predict(fd.modi, type = "response", newdata = des1[2,])) - (predict(fd.modi, type = "response", newdata = des1[3,]) -
+                                                                                    predict(fd.modi, type = "response", newdata = des1[4,]))
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
@@ -1067,6 +1101,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("Second Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="vglm"){
 
         out <- ("Partial proportional odds model not suppported in a general way. An example is provided in the following script: [first.diff.fitted.partial.prop.odds.e.g.r]")
@@ -1104,6 +1139,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("Second Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="zerotrunc") {
 
         des1 <- design.matrix[compare[1:4], ]
@@ -1121,6 +1157,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("Second Difference","SD of the distribution","ll.boot","ul.boot")
       } else if(class(mod)[1]=="hurdle") {
 
         des1 <- design.matrix[compare[1:4], ]
@@ -1138,6 +1175,7 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
           fd.dist[i,] <- obs.diffi}
         for(i in 1:ncol(fd.dist)){fd.dist[,i] <- sort(fd.dist[,i])}
         out <- data.frame(second.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        names(out) <- c("Second Difference","SD of the distribution","ll.boot","ul.boot")
       }else if(class(mod)=="clmm" & cum.probs=="no"){
         obs.diff<- (data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[1],])))$prob -
           data.frame(emmeans(mod,~dv,mode="prob",at=as.list(design[compare[2],])))$prob) -
@@ -1240,16 +1278,16 @@ diagn <- function(model){
   return(out)}
 
 list.coef<-function(model,rounded=3,alpha=.05){
-  if(class(model)[1]=="glmerMod"){out<-matrix(0,nr=length(fixef(model)),nc=10)}else{out<-matrix(0,nr=length(coef(model)),nc=10)}
-  if(class(model)[1]=="multinom"){out[,1]<-t(coef(model))}else if(class(model)[1]=="lme"){out[,1]<-fixef(model)}else if(class(model)[1]=="glmerMod"){out[,1]<-fixef(model)}else{out[,1]<-coef(model)}
+  if(class(model)[1]=="glmerMod" | class(model)[1]=="lmerMod"){out<-matrix(0,nr=length(fixef(model)),nc=10)}else{out<-matrix(0,nr=length(coef(model)),nc=10)}
+  if(class(model)[1]=="multinom"){out[,1]<-t(coef(model))}else if(class(model)[1]=="lme"){out[,1]<-fixef(model)}else if(class(model)[1]=="glmerMod" | class(model)[1]=="lmerMod"){out[,1]<-fixef(model)}else{out[,1]<-coef(model)}
 
-  if(class(model)[1]=="lme"){vcov1 <- vcov(model)}else if(class(model)[1]=="glmerMod"){vcov1 <- vcov(model)}else{vcov1<-vcov(model)[1:length(coef(model)),1:length(coef(model))]}
+  if(class(model)[1]=="lme"){vcov1 <- vcov(model)}else if(class(model)[1]=="glmerMod" | class(model)[1]=="lmerMod"){vcov1 <- vcov(model)}else{vcov1<-vcov(model)[1:length(coef(model)),1:length(coef(model))]}
   out[,2]<-sqrt(diag(vcov1))
   out[,3]<-out[,1]/out[,2]
   out[,4] <- out[,1]-qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
   out[,5] <- out[,1]+qnorm(1-(alpha/2),lower.tail=TRUE)*out[,2]
   out[,6]<-dnorm(out[,3])
-  if(class(model)[1]=="multinom"){ out[,7]<-exp(t(coef(model)))}else if(class(model)[1]=="lme"){out[,7]<-exp(fixef(model))}else if(class(model)[1]=="glmerMod"){out[,7]<-exp(fixef(model))}else{out[,7]<-exp(coef(model))}
+  if(class(model)[1]=="multinom"){ out[,7]<-exp(t(coef(model)))}else if(class(model)[1]=="lme"){out[,7]<-exp(fixef(model))}else if(class(model)[1]=="glmerMod" | class(model)[1]=="lmerMod"){out[,7]<-exp(fixef(model))}else{out[,7]<-exp(coef(model))}
   out[,8]<-exp(out[,4])
   out[,9]<-exp(out[,5])
   out[,10]<-100*(exp(out[,1])-1)
@@ -1264,24 +1302,15 @@ list.coef<-function(model,rounded=3,alpha=.05){
       namesi <- paste(rn[i],cn)
       names <- c(names,namesi)}
     out <- data.frame(variables=names,out)
-    }else if(class(model)[1]=="glmerMod"){out<-data.frame(variables=names(fixef(model)),out)}else{
+    }else if(class(model)[1]=="glmerMod" | class(model)[1]=="lmerMod"){out<-data.frame(variables=names(fixef(model)),out)}else{
     out <- data.frame(variables=names(coef(model)),out)}
-  outp<-list(out=out)
-  return(outp)}
+  if(class(model)[1]=="lm" | class(model)[1]=="lme" | class(model)[1]=="lmerMod" | class(model)[1]=="lmerModLmerTest" ){
+    out <- out[,c(1:7,12)]}
+  return(out)}
 
 
 
 
-compare.margins <- function(margins,margins.ses,seed=1234,rounded=3,nsim=10000){
-  difference <- margins[1] - margins[2]
-  if(difference>0){
-    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins[1],sd=margins.ses[1]) - rnorm(nsim,mean=margins[2],sd=margins.ses[2])) < 0) /nsim
-  }else{
-    set.seed(seed); p.value<-sum((rnorm(nsim,mean=margins[1],sd=margins.ses[1]) - rnorm(nsim,mean=margins[2],sd=margins.ses[2])) > 0) /nsim
-  }
-  out <- list(difference=round(difference,rounded),p.value=round(p.value,rounded))
-  return(out)
-}
 
 
 
