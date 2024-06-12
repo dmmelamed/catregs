@@ -141,7 +141,7 @@ margins.des<-function (mod, ivs, excl = "nonE",data) {
 margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                          pscl.data = data, num.sample = 1000, prop.sample = 0.9, seed = 1234) {
   pr <- NULL; prob <- NULL; SE <- NULL; fitted <- NULL ; se <- NULL
-  if(is(mod,"lm") | is(mod,"glm") | is(mod,"polr") | is(mod,"multinom") | is(mod,"vglm")  |
+  if(is(mod,"lm") | is(mod,"glm") | is(mod,"polr") | is(mod,"multinom") |
      is(mod,"negbin")  | is(mod,"zeroinfl") |  is(mod,"hurdle") | is(mod,"glmerMod")  |
      is(mod,"clmm")  | is(mod,"lme")| is(mod,"lmerModLmerTest") | is(mod,"lmerMod")){
 
@@ -787,31 +787,31 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
         out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,"sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
         names(out) <- c("First Difference","SD of the distribution","ll.boot","ul.boot")
       }  else if(is(mod,"clmm") & cum.probs=="no"){
-        obs.diff<- suppressMessages(data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(design[compare[1],])))$prob -
-          data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(design[compare[2],])))$prob)
+        obs.diff<- suppressMessages(data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(design.matrix[compare[1],])))$prob -
+                                      data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(design.matrix[compare[2],])))$prob)
         fd.model<-mod$model
         fd.dist <-matrix(NA,nrow=num.sample,ncol=length(obs.diff))
         for(i in 1:num.sample){
           set.seed(seed + i);  fd.model2 <- fd.model[sample(1:nrow(fd.model),round(prop.sample*nrow(fd.model),0),replace=TRUE),]
           fd.modi <- ordinal::clmm(formula(mod), data=fd.model2,na.action=na.omit)
-          obs.diffi<- suppressMessages(data.frame(emmeans::emmeans(fd.modi,~dv,mode="prob",at=as.list(design[compare[1],])))$prob -
-            data.frame(emmeans::emmeans(fd.modi,~dv,mode="prob",at=as.list(design[compare[2],])))$prob)
+          obs.diffi<- suppressMessages(data.frame(emmeans::emmeans(fd.modi,~dv,mode="prob",at=as.list(design.matrix[compare[1],])))$prob -
+                                         data.frame(emmeans::emmeans(fd.modi,~dv,mode="prob",at=as.list(design.matrix[compare[2],])))$prob)
           fd.dist[i,] <- obs.diffi}
         fd.dist[,1] <- sort(fd.dist[,1])
-        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(sd(fd.dist),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,FUN="sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       } else if(is(mod,"clmm") & cum.probs=="yes"){
-        obs.diff<- suppressMessages(data.frame(emmeans::emmeans(mod,~cut,mode="cum.prob",at=as.list(design[compare[1],])))$cumprob -
-          data.frame(emmeans::emmeans(mod,~cut,mode="cum.prob",at=as.list(design[compare[2],])))$cumprob)
+        obs.diff<- suppressMessages(data.frame(emmeans::emmeans(mod,~cut,mode="cum.prob",at=as.list(design.matrix[compare[1],])))$cumprob -
+                                      data.frame(emmeans::emmeans(mod,~cut,mode="cum.prob",at=as.list(design.matrix[compare[2],])))$cumprob)
         fd.model<-mod$model
         fd.dist <-matrix(NA,nrow=num.sample,ncol=length(obs.diff))
         for(i in 1:num.sample){
           set.seed(seed + i);  fd.model2 <- fd.model[sample(1:nrow(fd.model),round(prop.sample*nrow(fd.model),0),replace=TRUE),]
           fd.modi <- ordinal::clmm(formula(mod), data=fd.model2,na.action=na.omit)
-          obs.diffi<- suppressMessages(data.frame(emmeans::emmeans(fd.modi,~cut,mode="cum.prob",at=as.list(design[compare[1],])))$cumprob -
-            data.frame(emmeans::emmeans(fd.modi,~cut,mode="cum.prob",at=as.list(design[compare[2],])))$cumprob)
+          obs.diffi<- suppressMessages(data.frame(emmeans::emmeans(fd.modi,~cut,mode="cum.prob",at=as.list(design.matrix[compare[1],])))$cumprob -
+                                         data.frame(emmeans::emmeans(fd.modi,~cut,mode="cum.prob",at=as.list(design.matrix[compare[2],])))$cumprob)
           fd.dist[i,] <- obs.diffi}
         fd.dist <- apply(fd.dist,2,FUN="sort")
-        out <- data.frame(first.diff=round(obs.diff,rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(apply(fd.dist,2,FUN="sd"),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
       }
     }
     return(out)
