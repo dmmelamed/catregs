@@ -15,28 +15,14 @@ count.fit(m1,y.range,rounded=3,use.color="yes")
     \item{rounded}{The number of decimal places to round the output. The default is 3.}
     \item{use.color}{Whether to use color in the ggplot objects. Default is "yes"}
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
   \item{ic}{A data.frame summarizing the information criteria for the four models. Bayesian and Akaike's informaiton criteria are included.}
   \item{models}{A summary of the model estimates, including coefficients and standard errors.}
   \item{pic}{A ggplot object illustrating model residuals for each type of model.}
   \item{models.pic}{A ggplot object of coefficient plots from each type of model.}
 }
-\references{
-}
 \author{
 David Melamed
-}
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
 data("LF06art")
@@ -44,17 +30,4 @@ p1 <- glm(art ~ fem + mar + kid5 + phd + ment , family = "poisson", data = LF06a
 table(LF06art$art)
 fit<-count.fit(p1,0:19)
 names(fit)
-fit$ic
-fit$pic
-fit$models
-fit$models.pic
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.

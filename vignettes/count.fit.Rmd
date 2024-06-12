@@ -1,0 +1,28 @@
+---
+title: "count.fit"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the count.fit function.
+vignette: >
+  %\VignetteIndexEntry{count.fit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This function compares four models for count responses, namely Poisson regression, negative binomial regression, zero-inflated Poisson regression, and zero-inflated negative binomial regression. To do so, it takes a Poisson regression model object (as specified via glm), and the range on the count outcome. This function mimics the countfit function developed in Long and Freese (2006).
+
+For example:
+```{r}
+library(catregs)
+data("LF06art")
+p1 <- glm(art ~ fem + mar + kid5 + phd + ment , family = "poisson", data = LF06art)
+table(LF06art$art)
+fit<-count.fit(p1,0:19)
+names(fit)
+#fit$ic
+#fit$pic
+#fit$models
+#fit$models.pic
+```
+
+

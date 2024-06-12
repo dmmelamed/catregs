@@ -1,0 +1,20 @@
+---
+title: "diagn"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the diagn function.
+vignette: >
+  %\VignetteIndexEntry{diagn}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This function computes case-level diagnostics for generalized linear models. Conditional on model type, the function computes the most relevant diagnostics (circa 2024) and returns them as a data.frame object. 
+
+For example:
+```{r}
+library(catregs)
+data("Mize19AH")
+m1 <- glm(alcB ~woman*parrole + age + race2 + race3 + race4 + income + ed1 + ed2 + ed3 + ed4,family="binomial",data=Mize19AH)
+head(diagn(m1))
+```

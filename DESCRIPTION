@@ -1,23 +1,29 @@
 Package: catregs
 Type: Package
-Title: Post-estimation functions for Generalized Linear Mixed Models.
-Version: 0.1.4
-Author: David Melamed
-Maintainer: The package maintainer <dmmelamed@gmail.com>
-Description: Several functions for (mixed effects) regression models with limited dependent variables. 
+Title: Post-Estimation Functions for Generalized Linear Mixed Models
+Version: 0.2.1
+Authors@R: c(person("David", "Melamed", role = c("aut", "cre"), email = "dmmelamed@gmail.com", comment = c(ORCID = "0000-0002-8821-7698")))
+Description: Several functions for working with mixed effects regression models for limited dependent variables. The functions facilitate post-estimation of model predictions or margins, and comparisons between model predictions for assessing or probing moderation. Additional helper functions facilitate model comparisons and implements simulation-based inference for model predictions of alternative-specific outcome models. See also, Melamed and Doan (2024, ISBN: 978-1032509518). 
 Depends:
-License: What license is it under?
+License: GPL-2 | GPL-3
 Encoding: UTF-8
 LazyData: true
+Imports:
+    methods
 Suggests: 
     tidyverse, 
+    ggplot2,
     MASS,
     emmeans,
-    countreg,
     pscl,
     nnet,
     marginaleffects,
     ggpubr,
     knitr,
-    rmarkdown
+    rmarkdown,
+    Epi,
+    dplyr,
+    ordinal,
+    nlme,
+    lme4
 VignetteBuilder: knitr

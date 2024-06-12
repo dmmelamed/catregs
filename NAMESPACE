@@ -1,1 +1,8 @@
 exportPattern("^[[:alpha:]]+")
+    importFrom("stats", "AIC", "BIC", "as.formula", "coef", "dnbinom",
+               "dnorm", "dpois", "family", "formula", "glm",
+               "influence.measures", "lm", "logLik", "na.omit", "pchisq",
+               "plogis", "predict", "qnorm", "residuals", "residuals.glm",
+               "rnorm", "sd", "var", "vcov")
+    importFrom("utils", "data")
+    importFrom("methods", "is")

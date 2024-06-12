@@ -7,7 +7,8 @@
 Given a model object and a design matrix, this creates a data.frame of the design matrix, with predicted probabilities for each response category. Inferential information about the predict probabilities is supported with simulation. Bootstrapping may be added as an option for conditional logistic regression models.
 }
 \usage{
-margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.9,alpha=.05,seed=1234,rounded=3)}
+margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,
+prop.sample=.9,alpha=.05,seed=1234,rounded=3)}
 \arguments{
   \item{mod}{A conditional logistic regression model as estimated in the Epi package or an Exploded logistic regression model as estimated in the mlogit package.
 }
@@ -20,46 +21,18 @@ margins.dat.clogit(mod,design.matrix,run.boot="no",num.sample=1000,prop.sample=.
     \item{rounded}{How many decimal places to show in the output.}
 
 }
-\details{
-%%  ~~ If necessary, more details than the description above ~~
-}
 \value{
   \item{des}{Returns a data.frame containing the design matrix and additional columns for the predicted probabilities.}
   \item{boot.dist}{The full bootstrapped distribution for the probabilities.}
 }
-\references{
-}
 \author{
 David Melamed
 }
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
 \examples{
 data("LF06travel")
-require(Epi)
-m1 <- clogistic(choice ~ train + bus + time  + invc, strata=id, data=LF06travel)
+m1 <- Epi::clogistic(choice ~ train + bus +
+time  + invc, strata=id, data=LF06travel)
 design <- data.frame(train=c(0,0,1),bus=c(0,1,0),time=200,invc=20)
 design
 margins.dat.clogit(m1,design)
-
-ma1<-margins.dat.clogit(m1,design,run.boot="yes")
-names(ma1)
-ma1$des
-
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory (show via RShowDoc("KEYWORDS")):
-% \keyword{ ~kwd1 }
-% \keyword{ ~kwd2 }
-% Use only one keyword per line.
-% For non-standard keywords, use \concept instead of \keyword:
-% \concept{ ~cpt1 }
-% \concept{ ~cpt2 }
-% Use only one concept per line.

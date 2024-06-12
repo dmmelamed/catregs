@@ -1,0 +1,27 @@
+---
+title: "margins.dat.clogit"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the margins.dat.clogit function.
+vignette: >
+  %\VignetteIndexEntry{margins.dat.clogit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Computes predicted probabilities for conditional and rank-order/exploded logistic regression models. Inference is based upon simulation techniques. Alternatively, bootstrapping is an option for conditional logistic regression models.
+
+
+```{r}
+library(catregs)
+library(Epi)
+data("LF06travel")
+m1 <- clogistic(choice ~ train + bus + time  + invc, strata=id, data=LF06travel)
+design <- data.frame(train=c(0,0,1),bus=c(0,1,0),time=200,invc=20)
+design
+margins.dat.clogit(m1,design)
+
+ma1<-margins.dat.clogit(m1,design,run.boot="yes")
+names(ma1)
+ma1$des
+```

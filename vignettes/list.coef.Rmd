@@ -12,7 +12,7 @@ vignette: >
 Regression models for limited dependent variables are interpreted in several different ways. The estimated coefficients are often transformed before being interpreted, for example. Exponentiating logistic or count regression coefficients is common, as is converting the coefficient into percent change. The list.coef function transforms model coefficients into these additional quantities. It also reports confidence intervals for exponentiated coefficients. Users may specify the \# of decimal places to report and the alpha level. For example:
 
 ```{r}
-require(catregs)
+library(catregs)
 data("Mize19AH")
 m1 <- glm(alcB ~woman*parrole + age + race2 + race3 + race4 + income + ed1 + ed2 + ed3 + ed4,family="binomial",data=Mize19AH)
 list.coef(m1)

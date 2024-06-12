@@ -1,0 +1,13 @@
+---
+title: "rubins.rule"
+output: rmarkdown::html_vignette
+description: >
+  This vignette explains the rationale and implementation for the rubins.rule function.
+vignette: >
+  %\VignetteIndexEntry{rubins.rule}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The function aggregates multiple standard errors using Rubin's (2004) rule. 
+Rubin, Donald B. 2004. Multiple Imputation for Nonresponse in Surveys. Vol. 81. John Wiley & Sons.
