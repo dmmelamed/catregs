@@ -1,5 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
+
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 data(essUK)
 
@@ -39,7 +44,7 @@ ggplot(pdat,aes(x=xaxs,y=fitted,ymin=ll,ymax=ul,group=Minority,color=Minority)) 
   theme(legend.position="bottom") +
   scale_color_manual(values=c("grey0","grey60"))
 
-  
+
 pdat
 first.diff.fitted(m2,design,compare=c(3,1,4,2))
 
@@ -48,11 +53,10 @@ first.diff.fitted(m2,design,compare=c(4,2)) # Effect of gender for racial minori
 second.diff.fitted(m2,design,compare=c(3,1,4,2)) # The effect of gender is larger for majority members
 mem1<-first.diff.fitted(m2,design,compare=c(3,1))
 mem2<-first.diff.fitted(m2,design,compare=c(4,2))
-compare.margins(margins=c(mem1$first.diff,mem2$first.diff),margins.ses=c(mem1$std.error,mem2$std.error))
+compare.margins(margins=c(mem1$`First Difference`,mem2$`First Difference`),margins.ses=c(mem1$`Standard Error`,mem2$`Standard Error`))
 
 
-# Line 50 is the Marginal Effect at the Mean (all covariates are set to their means)
-require(margins)
+require(margins) # install from archive off of CRAN
 ma1 <- summary(margins(m2,variables="female",at=list(minority=0)))
 ma2 <- summary(margins(m2,variables="female",at=list(minority=1)))
 cames <- rbind(ma1,ma2)
@@ -96,14 +100,14 @@ design <- margins.des(m2,ivs=expand.grid(immigration.good.economy=0:10,female=c(
 design
 fdm<-first.diff.fitted(m2,design,compare=c(11,10,10,9,9,8,8,7,7,6,6,5,5,4,4,3,3,2,2,1))
 fdf<-first.diff.fitted(m2,design,compare=c(22,21,21,20,20,19,19,18,18,17,17,16,16,15,15,14,14,13,13,12))
-mean(fdf$first.diff)
-rubins.rule(fdf$std.error)
-dnorm(mean(fdf$first.diff)/rubins.rule(fdf$std.error))
+mean(fdf$`First Difference`)
+rubins.rule(fdf$`Standard Error`)
+dnorm(mean(fdf$`First Difference`)/rubins.rule(fdf$`Standard Error`))
 
 fdm
-mean(fdm$first.diff)
-rubins.rule(fdm$std.error)
-dnorm(mean(fdm$first.diff)/rubins.rule(fdm$std.error))
+mean(fdm$`First Difference`)
+rubins.rule(fdm$`Standard Error`)
+dnorm(mean(fdm$`First Difference`)/rubins.rule(fdm$`Standard Error`))
 
 
 
@@ -118,9 +122,9 @@ sd8<-second.diff.fitted(m2,design,compare=c(15,14,4,3)) # The effect of gender i
 sd9<-second.diff.fitted(m2,design,compare=c(14,13,3,2)) # The effect of gender is larger when immigration==0 vs 10
 sd10<-second.diff.fitted(m2,design,compare=c(13,12,2,1)) # The effect of gender is larger when immigration==0 vs 10
 secdiffs<-rbind(sd1,sd2,sd3,sd4,sd5,sd6,sd7,sd8,sd9,sd10)
-mean(secdiffs$est)
-rubins.rule(secdiffs$std.error)
-dnorm(mean(secdiffs$est)/rubins.rule(secdiffs$std.error))
+mean(secdiffs$`Second Difference`)
+rubins.rule(secdiffs$`Standard Error`)
+dnorm(mean(secdiffs$`Second Difference`)/rubins.rule(secdiffs$`Standard Error`))
 
 
 
@@ -175,7 +179,7 @@ for(i in 1:10){
   fd2<-mutate(fd2,relig=i)
   fd1<-rbind(fd1,fd2)}
 
-fds<- fd1 %>% group_by(relig) %>% summarize(fds=mean(first.diff),ses=rubins.rule(std.error))
+fds<- fd1 %>% group_by(relig) %>% summarize(fds=mean(`First Difference`),ses=rubins.rule(`Standard Error`))
 fds
 compare.margins(margins=fds$fds[c(1,11)],margins.ses=fds$ses[c(1,11)])
 
@@ -237,9 +241,9 @@ mems1<-first.diff.fitted(m2,design2,compare=c(2,1))
 for (i in 2:(nrow(design2) -1)){
   mems2<-first.diff.fitted(m2,design2,compare=c(i+1,i))
   mems1<-rbind(mems1,mems2)}
-mean(mems1$first.diff)
-rubins.rule(mems1$std.error)
-dnorm(mean(mems1$first.diff)/rubins.rule(mems1$std.error))
+mean(mems1$`First Difference`)
+rubins.rule(mems1$`Standard Error`)
+dnorm(mean(mems1$`First Difference`)/rubins.rule(mems1$`Standard Error`))
 
 summary(margins(m2,variables="age"))
 #summary(margins(m1))
@@ -252,15 +256,15 @@ for (i in 2:(nrow(design2) -1)){
   mems2<-first.diff.fitted(m2,design2,compare=c(i+1,i))
   mems1<-rbind(mems1,mems2)}
 mems1<-mutate(mems1,age=20:79)
-mean(mems1$first.diff[1:26])
-rubins.rule(mems1$std.error[1:26])
-dnorm(mean(mems1$first.diff[1:26])/rubins.rule(mems1$std.error[1:26]))
+mean(mems1$`First Difference`[1:26])
+rubins.rule(mems1$`Standard Error`[1:26])
+dnorm(mean(mems1$`First Difference`[1:26])/rubins.rule(mems1$`Standard Error`[1:26]))
 
-mean(mems1$first.diff[31:60])
-rubins.rule(mems1$std.error[31:60])
-dnorm(mean(mems1$first.diff[31:60]),rubins.rule(mems1$std.error[31:60]))
-compare.margins(margins=c(mean(mems1$first.diff[1:26]),mean(mems1$first.diff[31:60])),
-                margins.ses=c(rubins.rule(mems1$std.error[1:26]),rubins.rule(mems1$std.error[31:60])))
+mean(mems1$`First Difference`[31:60])
+rubins.rule(mems1$`Standard Error`[31:60])
+dnorm(mean(mems1$`First Difference`[31:60]),rubins.rule(mems1$`Standard Error`[31:60]))
+compare.margins(margins=c(mean(mems1$`First Difference`[1:26]),mean(mems1$`First Difference`[31:60])),
+                margins.ses=c(rubins.rule(mems1$`Standard Error`[1:26]),rubins.rule(mems1$`Standard Error`[31:60])))
 
 
 m3 <- glm(highinc ~ religious + female  + minority + married*age + married*I(age^2) ,data=X,family="binomial")
@@ -284,13 +288,13 @@ design[,ncol(design)] <- design$age^2 #fix age-squared
 head(design)
 dim(design)
 fds <- first.diff.fitted(m3,design,compare=1:nrow(design))
-fds 
+fds
 fds<-mutate(fds,age=25:65)
-ggplot(fds,aes(x=age,y=first.diff,ymin=ll,ymax=ul))  + theme_bw() + geom_line() +
+ggplot(fds,aes(x=age,y=`First Difference`,ymin=ll,ymax=ul))  + theme_bw() + geom_line() +
   geom_ribbon(alpha=.2) + geom_hline(yintercept=0,linetype=2) +
   labs(x="Age",y="MEM of Married, conditional on Age") + scale_y_continuous(limits=c(-.65,.14))
 
-p1<-ggplot(fds,aes(x=age,y=first.diff,ymin=ll,ymax=ul))  + theme_bw() + geom_line() +
+p1<-ggplot(fds,aes(x=age,y=`First Difference`,ymin=ll,ymax=ul))  + theme_bw() + geom_line() +
   geom_ribbon(alpha=.2) + geom_hline(yintercept=0,linetype=2) +
   labs(x="Age",y="MEM of Married, conditional on Age") + scale_y_continuous(limits=c(-.65,.14))
 
@@ -314,7 +318,7 @@ ggarrange(p1,p2,labels=c("A","B"))
 ma1[c(16,41),]
 fds[c(16,41),]
 compare.margins(margins=ma1$AME[c(16,41)],margins.ses=ma1$SE[c(16,41)])
-compare.margins(margins=fds$first.diff[c(16,41)],margins.ses=fds$std.error[c(16,41)])
+compare.margins(margins=fds$`First Difference`[c(16,41)],margins.ses=fds$`Standard Error`[c(16,41)])
 
 
 
@@ -323,10 +327,5 @@ ma2<-summary(margins(m3,variables=c("age"),at=list(married=1)))
 ma1;ma2
 compare.margins(margins=c(ma1$AME,ma2$AME),margins.ses=c(ma1$SE,ma2$SE))
 
-p2<-ggplot(ma1,aes(x=age,y=AME,ymin=lower,ymax=upper)) + theme_bw() + geom_line() +
-  geom_ribbon(alpha=.2) + geom_hline(yintercept=0,linetype=2) +
-  labs(x="Age",y="AME of Female, conditional on Age") + scale_y_continuous(limits=c(-.33,.08))
-require(ggpubr)
-ggarrange(p1,p2,labels=c("A","B"))
 
 

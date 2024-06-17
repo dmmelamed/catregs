@@ -1,6 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
 
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 data(essUK)
 head(essUK)
@@ -20,7 +24,7 @@ X$walk.alone.dark2 <- relevel(as.factor(X$walk.alone.dark), ref = "Very safe")
 m1<-multinom(walk.alone.dark2 ~ education + religious + minority  + female + age + selfemp + unemp,data=X)
 summary(m1)
 list.coef(m1)
-pdat<-list.coef(m1)$out
+pdat<-list.coef(m1)
 pdat <- pdat[-c(1,9,17),]
 
 #Coefficient plot; Figure 8.1
@@ -55,7 +59,7 @@ first.diff.fitted(m1,design,compare=c(3,7))
 design <- margins.des(m1,ivs=expand.grid(female=c(0,1)), data=X)
 pdat <- margins.dat(m1,design)
 pdat <- mutate(pdat,sex=rep(c("Male","Female"),each=4),
-               xaxs=c(0,.15,.3,.45,.05,.2,.35,.5))
+               xaxs=c(.5,.05,.2,.35,.45,0,.15,.3))
 ggplot(pdat,aes(x=xaxs,y=prob,ymin=ll,ymax=ul,fill=sex)) +
   theme_bw() + geom_col() +
   scale_fill_manual(values=c("grey65","grey35")) +
@@ -71,21 +75,22 @@ first.diff.fitted(m1,design,compare=c(1,2)) # Significance of those differences
 
 # Average Marginal Effects and Conditional Average Marginal Effects
 require(marginaleffects)
-summary(marginaleffects(m1))
+summary(slopes(m1))
 
 
-summary(marginaleffects(m1,newdata=datagrid(minority=1)))
-summary(marginaleffects(m1,newdata=datagrid(minority=0)))
+summary(slopes(m1,newdata=datagrid(minority=1)))
+summary(slopes(m1,newdata=datagrid(minority=0)))
 
-mef <- data.frame(summary(marginaleffects(m1,variables="female",newdata=datagrid(minority=0))))
-mef2 <- data.frame(summary(marginaleffects(m1,variables="female",newdata=datagrid(minority=1))))
+mef <- data.frame(slopes(m1,variables="female",newdata=datagrid(minority=0)))
+mef2 <- data.frame(slopes(m1,variables="female",newdata=datagrid(minority=1)))
 mef<-rbind(mef,mef2)
 mef <-mutate(mef,Minority=rep(c("No","Yes"),each=4),
-             xaxs=c(0,.15,.3,.45,.05,.2,.35,.5))
+             xaxs=c(.45,0,.15,.3,.5,.05,.2,.35))
+
 # Figure 8.5
 ggplot(mef,aes(x=xaxs,y=estimate,ymin=conf.low,ymax=conf.high,color=Minority)) + theme_bw() +
   geom_pointrange() + geom_hline(yintercept=0) + labs(x="",y="AME of Female") +
-  scale_color_manual(values=c("grey0","grey60")) + 
+  scale_color_manual(values=c("grey0","grey60")) +
   theme(legend.position="bottom") +
   scale_x_continuous(breaks=c(.025,.175,.325,.475),labels=c("Very unsafe","Unsafe","Safe","Very Safe"))
 
@@ -94,7 +99,7 @@ ggplot(mef,aes(x=xaxs,y=estimate,ymin=conf.low,ymax=conf.high,color=Minority)) +
 m1<-multinom(walk.alone.dark ~ education + religious + minority  + female + age + selfemp + unemp,data=X)
 X <- mutate(X,walk2=recode_factor(walk.alone.dark,"Very unsafe"="Unsafe"))
 m2<-multinom(walk2 ~ education + religious + minority  + female + age + selfemp + unemp,data=X)
-lr.test(m1,m2)
+#anova(m1,m2)
 
 
 
@@ -102,19 +107,19 @@ lr.test(m1,m2)
 require(mlogit)
 X2<-mlogit.data(X,choice="walk.alone.dark",shape="wide")
 ml1 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2, reflevel = "Very safe")
-ml2 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2, 
+ml2 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2,
               reflevel = "Very safe",
               alt.subset=c("Safe","Unsafe","Very safe"))
 hmftest(ml1,ml2) # Test for Very unsafe
-ml3 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2, 
+ml3 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2,
               reflevel = "Very safe",
               alt.subset=c("Safe","Very unsafe","Very safe"))
 hmftest(ml1,ml3) # Test for Unsafe
-ml4 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2, 
+ml4 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2,
               reflevel = "Very safe",
               alt.subset=c("Unsafe","Very unsafe","Very safe"))
 hmftest(ml1,ml4) # Test for Safe
-ml5 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2, 
+ml5 <- mlogit(walk.alone.dark ~ 0|education + religious + minority  + female + age + selfemp + unemp, data=X2,
               reflevel = "Safe",
               alt.subset=c("Unsafe","Very unsafe","Safe"))
 hmftest(ml1,ml5) # Test for Very safe

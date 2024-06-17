@@ -1,6 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
 
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 data("LF06travel")
 LF06travel <- mutate(LF06travel,mode2=mode)
@@ -57,7 +61,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*0,lp.se=proflow*0,lp.sr=proflow*0,lp.lp=proflow*0,lp.up=proflow*0,
                   up.sk=profhigh*0,up.se=profhigh*0,up.sr=profhigh*0,up.lp=profhigh*0,up.up=profhigh*0)
 margins.dat.clogit(m3,design1)
-mar1<-margins.dat.clogit(m3,design1,rounded=3)            
+mar1<-margins.dat.clogit(m3,design1,rounded=3)
 mar1
 
 
@@ -69,7 +73,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*1,lp.se=proflow*0,lp.sr=proflow*0,lp.lp=proflow*0,lp.up=proflow*0,
                   up.sk=profhigh*1,up.se=profhigh*0,up.sr=profhigh*0,up.lp=profhigh*0,up.up=profhigh*0)
 
-mar2<-margins.dat.clogit(m3,design1,rounded=3)            
+mar2<-margins.dat.clogit(m3,design1,rounded=3)
 mar2
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -80,7 +84,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*0,lp.se=proflow*1,lp.sr=proflow*0,lp.lp=proflow*0,lp.up=proflow*0,
                   up.sk=profhigh*0,up.se=profhigh*1,up.sr=profhigh*0,up.lp=profhigh*0,up.up=profhigh*0)
 
-mar3<-margins.dat.clogit(m3,design1,rounded=3)            
+mar3<-margins.dat.clogit(m3,design1,rounded=3)
 mar3
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -91,7 +95,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*0,lp.se=proflow*0,lp.sr=proflow*1,lp.lp=proflow*0,lp.up=proflow*0,
                   up.sk=profhigh*0,up.se=profhigh*0,up.sr=profhigh*1,up.lp=profhigh*0,up.up=profhigh*0)
 
-mar4<-margins.dat.clogit(m3,design1,rounded=3)            
+mar4<-margins.dat.clogit(m3,design1,rounded=3)
 mar4
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -102,7 +106,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*0,lp.se=proflow*0,lp.sr=proflow*0,lp.lp=proflow*1,lp.up=proflow*0,
                   up.sk=profhigh*0,up.se=profhigh*0,up.sr=profhigh*0,up.lp=profhigh*1,up.up=profhigh*0)
 
-mar5<-margins.dat.clogit(m3,design1,rounded=3)            
+mar5<-margins.dat.clogit(m3,design1,rounded=3)
 mar5
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -113,7 +117,7 @@ design1 <- mutate(design1,
                   lp.sk=proflow*0,lp.se=proflow*0,lp.sr=proflow*0,lp.lp=proflow*0,lp.up=proflow*1,
                   up.sk=profhigh*0,up.se=profhigh*0,up.sr=profhigh*0,up.lp=profhigh*0,up.up=profhigh*1)
 
-mar6<-margins.dat.clogit(m3,design1,rounded=3)            
+mar6<-margins.dat.clogit(m3,design1,rounded=3)
 mar6
 
 
@@ -151,8 +155,8 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-margins.dat.clogit(m4,design1)            
-mar1<-margins.dat.clogit(m4,design1)            
+margins.dat.clogit(m4,design1)
+mar1<-margins.dat.clogit(m4,design1)
 mar1
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -167,7 +171,7 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-mar2<-margins.dat.clogit(m4,design1)            
+mar2<-margins.dat.clogit(m4,design1)
 mar2
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -182,7 +186,7 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-mar3<-margins.dat.clogit(m4,design1)            
+mar3<-margins.dat.clogit(m4,design1)
 mar3
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -197,7 +201,7 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-mar4<-margins.dat.clogit(m4,design1)            
+mar4<-margins.dat.clogit(m4,design1)
 mar4
 
 
@@ -214,7 +218,7 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-mar5<-margins.dat.clogit(m4,design1)            
+mar5<-margins.dat.clogit(m4,design1)
 mar5
 
 
@@ -230,8 +234,8 @@ design1 <- mutate(design1,
                   sr.e=service*12,
                   lp.e=proflow*12,
                   up.e=profhigh*12)
-margins.dat.clogit(m4,design1)            
-mar6<-margins.dat.clogit(m4,design1)            
+margins.dat.clogit(m4,design1)
+mar6<-margins.dat.clogit(m4,design1)
 mar6
 
 margins <- rbind(mar1,mar2,mar3,mar4,mar5,mar6)
@@ -246,7 +250,7 @@ ggplot(margins,aes(x=occs,y=foccs,fill=probs)) + geom_tile() +
        fill="Probability",title="Respondent has 12 years of Education") +
   geom_text(aes(label = probs))
 p1.ed <- ggplot(margins,aes(x=occs,y=foccs,fill=probs)) + geom_tile() +
-  theme_bw() + 
+  theme_bw() +
   scale_fill_gradient(low="purple",high="orange",limits=c(0,.4)) +
   labs(x="Respondent's Occupational Category",y="Father's Occupational Category",
        fill="Probability",title="Respondent has 12 years of Education") +
@@ -266,7 +270,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar1<-margins.dat.clogit(m4,design1)            
+mar1<-margins.dat.clogit(m4,design1)
 mar1
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -281,7 +285,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar2<-margins.dat.clogit(m4,design1)            
+mar2<-margins.dat.clogit(m4,design1)
 mar2
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -296,7 +300,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar3<-margins.dat.clogit(m4,design1)            
+mar3<-margins.dat.clogit(m4,design1)
 mar3
 
 design1 <- data.frame(skmanual=c(0,1,0,0,0,0),selfemp=c(0,0,1,0,0,0),service=c(0,0,0,1,0,0),proflow=c(0,0,0,0,1,0),profhigh=c(0,0,0,0,0,1))
@@ -311,7 +315,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar4<-margins.dat.clogit(m4,design1)            
+mar4<-margins.dat.clogit(m4,design1)
 mar4
 
 
@@ -328,7 +332,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar5<-margins.dat.clogit(m4,design1)            
+mar5<-margins.dat.clogit(m4,design1)
 mar5
 
 
@@ -344,7 +348,7 @@ design1 <- mutate(design1,
                   sr.e=service*16,
                   lp.e=proflow*16,
                   up.e=profhigh*16)
-mar6<-margins.dat.clogit(m4,design1)            
+mar6<-margins.dat.clogit(m4,design1)
 mar6
 
 margins2 <- rbind(mar1,mar2,mar3,mar4,mar5,mar6)
@@ -376,7 +380,7 @@ compare.margins(margins=c(margins2$probs[15],margins$probs[15]),
 
 
 ###
-### Rank-Order Logit. Only with No Ties. 
+### Rank-Order Logit. Only with No Ties.
 rm(list=ls())
 
 require(mlogit)
@@ -495,7 +499,7 @@ logan2 <- mutate(logan2,sales=ifelse(operatives==0 & craftsmen==0 & farm==0 & pr
 m5 <- clogistic(case ~ operatives + craftsmen + sales + professional  , strata=id, data=logan2)
 design1 <- data.frame(operatives=c(0,1,0,0,0),craftsmen=c(0,0,1,0,0),sales=c(0,0,0,1,0),professional=c(0,0,0,0,1))
 margins.dat.clogit(m5,design1)
-# Baseline probability of being in any occupational category; same as the proportions in the table statement...            
+# Baseline probability of being in any occupational category; same as the proportions in the table statement...
 
 m6 <- clogistic(case ~ operatives*focc + craftsmen*focc + sales*focc + professional*focc  , strata=id, data=logan2)
 m6
@@ -506,7 +510,7 @@ design1 <- mutate(design1,oo=operatives*0,oc=operatives*0,os=operatives*0,op=ope
                   co=craftsmen*0,cc=craftsmen*0,cs=craftsmen*0,cp=craftsmen*0,
                   so=sales*0,sc=sales*0,ss=sales*0,sp=sales*0,
                   po=professional*0,pc=professional*0,ps=professional*0,pp=professional*0)
-mar1<-margins.dat.clogit(m6,design1,rounded=2)            
+mar1<-margins.dat.clogit(m6,design1,rounded=2)
 mar1
 
 design1 <- data.frame(operatives=c(0,1,0,0,0),craftsmen=c(0,0,1,0,0),sales=c(0,0,0,1,0),professional=c(0,0,0,0,1))
@@ -514,7 +518,7 @@ design1 <- mutate(design1,oo=operatives*1,oc=operatives*0,os=operatives*0,op=ope
                   co=craftsmen*1,cc=craftsmen*0,cs=craftsmen*0,cp=craftsmen*0,
                   so=sales*1,sc=sales*0,ss=sales*0,sp=sales*0,
                   po=professional*1,pc=professional*0,ps=professional*0,pp=professional*0)
-mar2<-margins.dat.clogit(m6,design1,rounded=2)            
+mar2<-margins.dat.clogit(m6,design1,rounded=2)
 mar2
 
 design1 <- data.frame(operatives=c(0,1,0,0,0),craftsmen=c(0,0,1,0,0),sales=c(0,0,0,1,0),professional=c(0,0,0,0,1))
@@ -522,7 +526,7 @@ design1 <- mutate(design1,oo=operatives*0,oc=operatives*1,os=operatives*0,op=ope
                   co=craftsmen*0,cc=craftsmen*1,cs=craftsmen*0,cp=craftsmen*0,
                   so=sales*0,sc=sales*1,ss=sales*0,sp=sales*0,
                   po=professional*0,pc=professional*1,ps=professional*0,pp=professional*0)
-mar3<-margins.dat.clogit(m6,design1,rounded=2)            
+mar3<-margins.dat.clogit(m6,design1,rounded=2)
 mar3
 
 design1 <- data.frame(operatives=c(0,1,0,0,0),craftsmen=c(0,0,1,0,0),sales=c(0,0,0,1,0),professional=c(0,0,0,0,1))
@@ -530,7 +534,7 @@ design1 <- mutate(design1,oo=operatives*0,oc=operatives*0,os=operatives*1,op=ope
                   co=craftsmen*0,cc=craftsmen*0,cs=craftsmen*1,cp=craftsmen*0,
                   so=sales*0,sc=sales*0,ss=sales*1,sp=sales*0,
                   po=professional*0,pc=professional*0,ps=professional*1,pp=professional*0)
-mar4<-margins.dat.clogit(m6,design1,rounded=2)            
+mar4<-margins.dat.clogit(m6,design1,rounded=2)
 mar4
 
 design1 <- data.frame(operatives=c(0,1,0,0,0),craftsmen=c(0,0,1,0,0),sales=c(0,0,0,1,0),professional=c(0,0,0,0,1))
@@ -538,7 +542,7 @@ design1 <- mutate(design1,oo=operatives*0,oc=operatives*0,os=operatives*0,op=ope
                   co=craftsmen*0,cc=craftsmen*0,cs=craftsmen*0,cp=craftsmen*1,
                   so=sales*0,sc=sales*0,ss=sales*0,sp=sales*1,
                   po=professional*0,pc=professional*0,ps=professional*0,pp=professional*1)
-mar5<-margins.dat.clogit(m6,design1,rounded=2)            
+mar5<-margins.dat.clogit(m6,design1,rounded=2)
 mar5
 
 # mar1 is when dad is farmer
@@ -561,8 +565,7 @@ p4<-ggplot(margins,aes(x=occs,y=foccs,fill=probs)) + geom_tile() +
   labs(x="Respondent's Occupational Category",y="Father's Occupational Category",
        fill="Probability") +
   geom_text(aes(label = probs))
-setwd("~/Desktop/School/Research/InPrep/Categorical Regression Book/Chapter 10 Rank order ")
-ggsave("Fig10.4.eps", plot = p4)
+#ggsave("Fig10.4.eps", plot = p4)
 
 # Compare probability of being professional by prof/farm father
 compare.margins(margins=margins$probs[c(25,5)],margins.ses=margins$se[c(25,5)])

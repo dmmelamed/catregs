@@ -1,6 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
 
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 require(marginaleffects)
 
@@ -15,6 +19,7 @@ require(marginaleffects)
 # Count Fit
 # Zero Truncated
 # Hurdle
+data(essUK)
 
 X <- mutate(essUK,minority=ifelse(ethnic.minority=="Yes",1,0),female=ifelse(gender=="Female",1,0),
             divorced=ifelse(marital=="Divorced",1,0),married=ifelse(marital=="Married",1,0),widow=ifelse(marital=="Widow",1,0))
@@ -30,7 +35,7 @@ ggplot(X,aes(x=num.children)) + geom_bar() + theme_bw() +
 
 
 # Coefficient plots; Figure 9.2
-pdat <- list.coef(m1)$out
+pdat <- list.coef(m1)
 ggplot(pdat[2:nrow(pdat),],aes(y=reorder(variables,exp.b),x=exp.b,xmin=ll.exp.b,xmax=ul.exp.b)) +
   theme_bw() + geom_pointrange() + labs(x="Incidence Rate Ratio",y="") + geom_vline(xintercept=1)
 ggplot(pdat[2:nrow(pdat),],aes(x=b,xmin=ll,xmax=ul,y=variables)) +
@@ -65,7 +70,7 @@ first.diff.fitted(m1,pdat,compare=c(1,2))
 first.diff.fitted(m1,pdat,compare=c(1,3))
 first.diff.fitted(m1,pdat,compare=c(1,4))
 
-summary(marginaleffects(m1))
+summary(slopes(m1))
 
 
 
@@ -126,13 +131,12 @@ cbind(coef(m1)/sqrt(diag(vcov(m1))),coef(m1.check)/sqrt(diag(vcov(m1.check)))) #
 require(MASS)
 m2 <- glm.nb(num.children ~ religious + minority  + female + age + education + divorced + married + widow ,data=X)
 summary(m2)
-lr.test(m1,m2)
+anova(m1,m2)
 
 # Coefficient plots; Figure 9.6
-pdat <- list.coef(m2)$out
+pdat <- list.coef(m2)
 ggplot(pdat[2:nrow(pdat),],aes(x=exp.b,xmin=ll.exp.b,xmax=ul.exp.b,y=reorder(variables,exp.b))) +
   theme_bw() + geom_pointrange() + labs(x="Incidence Rate Ratio",y="") + geom_vline(xintercept=1)
-setwd("~/Desktop/School/Research/InPrep/Categorical Regression Book/Chapter 9 Count Models")
 
 
 
@@ -218,7 +222,7 @@ summary(m4)
 list.coef(m4)
 
 # Coefficient plots; Figure 9.9
-pdat <- list.coef(m4)$out
+pdat <- list.coef(m4)
 ggplot(pdat[2:9,],aes(x=exp.b,xmin=ll.exp.b,xmax=ul.exp.b,y=reorder(variables,b))) +
   theme_bw() + geom_pointrange() + geom_vline(xintercept=1) +
   labs(x="Incidence Rate Ratio",y="")
@@ -239,7 +243,7 @@ ggarrange(p1,p2,labels=c("A","B"))
 
 # Predicted counts
 design <- margins.des(m4,ivs=expand.grid(education=10:18))
-pdat <- margins.dat(m4,design)
+pdat <- margins.dat(m4,design) # does not work, need to specify data
 pdat <- margins.dat(m4,design,pscl.data=X)
 
 # Figure 9.10
@@ -273,8 +277,8 @@ compare.margins(margins=pdat$fitted[1:2],margins.ses=pdat$se[1:2])
 compare.margins(margins=pdat$fitted[3:4],margins.ses=pdat$se[3:4])
 
 # Ames
-ma1<-summary(marginaleffects(m4,variables="female",newdata=datagrid(education=10))) # conditional AME
-ma2<-summary(marginaleffects(m4,variables="female",newdata=datagrid(education=18))) # conditional AME
+ma1<-slopes(m4,variables="female",newdata=datagrid(education=10)) # conditional AME
+ma2<-slopes(m4,variables="female",newdata=datagrid(education=18)) # conditional AME
 ma<-rbind(ma1,ma2)
 ma
 compare.margins(margins=ma$estimate,margins.ses=ma$std.error)
@@ -283,7 +287,7 @@ compare.margins(margins=ma$estimate,margins.ses=ma$std.error)
 apply(m4$model,2,FUN="mean")
 design <- margins.des(m4,ivs=expand.grid(female=.548))
 
-predict(m4,newdata=design,type="prob") 
+predict(m4,newdata=design,type="prob")
 
 pdat <- data.frame(Counts=rep(0:10,2),vals=c(predict(m4,newdata=design,type="prob"),table(X$num.children)/length(X$num.children)),
                    type=rep(c("model","observed"),each=11))
@@ -354,67 +358,10 @@ summary(m7)
 list.coef(m7)
 
 # Coefficient plots; Figure 9.14
-pdat <- list.coef(m7)$out
+pdat <- list.coef(m7)
 ggplot(pdat[2:nrow(pdat),],aes(x=exp.b,xmin=ll.exp.b,xmax=ul.exp.b,y=reorder(variables,b))) +
   theme_bw() + geom_pointrange() + labs(x="Incidence Rate Ratios",y="") + geom_vline(xintercept=1)
 
-
-
-d1 <- margins.des(m7,ivs=expand.grid(divorced=0,married=0,widow=0))
-d2 <- margins.des(m7,ivs=expand.grid(divorced=1,married=0,widow=0))
-d3 <- margins.des(m7,ivs=expand.grid(divorced=0,married=1,widow=0))
-d4 <- margins.des(m7,ivs=expand.grid(divorced=0,married=0,widow=1))
-design <- rbind(d1,d2,d3,d4)
-design
-pdat <- margins.dat(m7,design)
-pdat <- mutate(pdat,type=c("Single","Divorced","Married","Widow"))
-# Fig 9.15
-ggplot(pdat,aes(x=type,y=fitted,ymin=ll,ymax=ul)) +
-  theme_bw() + geom_pointrange() + labs(x="",y="Predicted Count of Children") +
-  scale_y_continuous(limits=c(2,3))
-
-
-
-
-
-# Predicted probabilities
-design <- margins.des(m7,ivs=expand.grid(female=.548))
-predict(m7,newdata=design,type="prob")
-pdat <- data.frame(Counts=rep(1:10,2),vals=c(predict(m7,newdata=design,type="prob"),table(X$ztkids)/length(X$ztkids)),
-                   type=rep(c("model","observed"),each=10))
-ggplot(pdat,aes(x=Counts,y=vals,group=type,linetype=type)) +
-  theme_bw() + geom_line() + geom_point()
-
-# How do predicted probabilities vary by education?
-design <- margins.des(m7,ivs=expand.grid(education=c(10,18)))
-pdat <- data.frame(Counts=rep(1:10,2),
-                   vals=c(predict(m7,newdata=design[1,],type="prob"),
-                          predict(m7,newdata=design[2,],type="prob")),
-                   type=rep(c("10","18"),each=10))
-ggplot(pdat,aes(x=Counts,y=vals,group=type,linetype=type)) +
-  theme_bw() + geom_line() + geom_point()
-# How do predicted probabilities vary by marital status?
-d1 <- margins.des(m7,ivs=expand.grid(divorced=0,married=0,widow=0))
-d2 <- margins.des(m7,ivs=expand.grid(divorced=1,married=0,widow=0))
-d3 <- margins.des(m7,ivs=expand.grid(divorced=0,married=1,widow=0))
-d4 <- margins.des(m7,ivs=expand.grid(divorced=0,married=0,widow=1))
-design <- rbind(d1,d2,d3,d4)
-design
-pdat <- data.frame(Counts=rep(1:10,2),
-                   vals=c(predict(m7,newdata=design[1,],type="prob"),
-                          predict(m7,newdata=design[2,],type="prob"),
-                          predict(m7,newdata=design[3,],type="prob"),
-                          predict(m7,newdata=design[4,],type="prob")),
-                   type=rep(c("Single","Divorced","Married","Widow"),each=10))
-ggplot(pdat,aes(x=Counts,y=vals,group=type,linetype=type,color=type)) +
-  theme_bw() + geom_line() + geom_point()
-
-# Diagnostics
-dia <- diagn(m7)
-ggplot() +
-  geom_text(data=dia,aes(x=obs,y=pearsonres,label=obs),position=position_nudge(y=.3)) +
-  xlab("Case") + ylab("Pearson Residual")
-# Check robustness to outliers.
 
 
 # Hurdle Models
@@ -428,10 +375,9 @@ summary(m9)
 list.coef(m9)
 
 # Coefficient plots; Figure 9.16
-pdat <- list.coef(m8)$out
+pdat <- list.coef(m8)
 ggplot(pdat[-c(1,10),],aes(x=exp.b,xmin=ll.exp.b,xmax=ul.exp.b,y=variables)) +
   theme_bw() + geom_pointrange() + labs(x="Exp(b)",y="") + geom_vline(xintercept=1)
-setwd("~/Desktop/School/Research/InPrep/Categorical Regression Book/Chapter 9 Count Models")
 
 ggplot(pdat[-c(1,10),],aes(x=b,xmin=ll,xmax=ul,y=variables)) +
   theme_bw() + geom_pointrange() + labs(x="Logged-Coefficient",y="") + geom_vline(xintercept=0)
@@ -442,7 +388,6 @@ pdat <- margins.dat(m8,design)
 ggplot(pdat,aes(x=education,y=fitted,ymin=ll,ymax=ul)) +
   theme_bw() + geom_point() + geom_line() + geom_ribbon(alpha=.2) +
   labs(x="Education",y="Predicted # of Children")
-setwd("~/Desktop/School/Research/InPrep/Categorical Regression Book/Chapter 9 Count Models")
 
 d1 <- margins.des(m8,ivs=expand.grid(divorced=0,married=0,widow=0))
 d2 <- margins.des(m8,ivs=expand.grid(divorced=1,married=0,widow=0))
@@ -458,10 +403,4 @@ ggplot(pdat,aes(x=marital,y=fitted,ymin=ll,ymax=ul)) +
 # Predicted probabilities; Figure 9.18
 table(X$num.children)
 design <- margins.des(m8,ivs=expand.grid(female=.548))
-predict(m8,newdata=design,type="prob")
-pdat <- data.frame(Counts=rep(0:10,2),
-                   vals=c(predict(m8,newdata=design,type="prob"),table(X$num.children)/length(X$num.children)),
-                   type=rep(c("model","observed"),each=11))
-ggplot(pdat,aes(x=Counts,y=vals,group=type,linetype=type)) +
-  theme_bw() + geom_line() + geom_point() + theme(legend.position="bottom")
-
+design

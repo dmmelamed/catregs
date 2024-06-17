@@ -1,5 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
+
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 data(essUK)
 
@@ -27,18 +32,18 @@ names(coef(m1)) # the 6-7 is employment
 wald.test(b = coef(m1), Sigma = vcov(m1), Terms = 6:7)
 
 m2<- glm(safe ~ religious + minority  + female + age,data=dat,family=binomial)
-lr.test(m2,m1)
+anova(m2,m1)
 
 require(car)
 linearHypothesis(m1, c("emp1 = emp2"))
 
 m3 <- glm(safe ~ religious + minority  + female + age + I(emp1 +emp2),data=dat,family=binomial)
-lr.test(m1,m3)
+anova(m1,m3)
 
 # odds ratio
 list.coef(m1)
 # Figure 5.3
-ar <-list.coef(m1)$out
+ar <-list.coef(m1)
 ar <- ar[-1,]
 ggplot(ar,aes(y=reorder(variables,exp.b),x=exp.b,xmax=ul.exp.b,xmin=ll.exp.b)) + theme_bw() +
   geom_pointrange() + labs(x="Odds Ratio (95% CI)",y="") +
@@ -95,7 +100,7 @@ first.diff.fitted(m1, design, compare=c(3,10))
 
 
 require(marginaleffects)
-summary(marginaleffects(m1))
+summary(slopes(m1))
 # or, require(margins); summary(margins(m1)) # the latter is reported
 
 
@@ -136,7 +141,7 @@ logLik(m1) # LL #1
 m0<-glm(safe ~ 1,data=dat,family=binomial)
 logLik(m0) # LL #2
 deviance(m1)
-lr.test(m1,m0)
+anova(m1,m0)
 require("pscl")
 pR2(m1) # Fewer than Stata, but none are useful...
 AIC(m1)

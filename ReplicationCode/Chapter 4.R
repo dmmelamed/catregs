@@ -1,5 +1,11 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
+
+
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs)
 require(catregs)
 data(essUK)
 
@@ -7,8 +13,7 @@ X <- filter(essUK,country=="United Kingdom")
 table(X$walk.alone.dark)
 
 X <- mutate(X,safe = ifelse(walk.alone.dark=="Safe" | walk.alone.dark==
-                              "Very safe",1,0),
-            cated=NA)
+                              "Very safe",1,0),cated=NA)
 X$cated[which(X$education<13)]<-"HS Or Less"
 X$cated[which(X$education > 12 & X$education < 16)]<-"Some College"
 X$cated[which(X$education == 16)]<-"BA/BS"
@@ -77,7 +82,7 @@ o2/o1 # Men are 2.93 times more likely than women to report feeling safe walking
 
 
 # iii.	Bivariate Statistical Tests
-# Chi-squared here. Fit versus not fit. 
+# Chi-squared here. Fit versus not fit.
 
 # Start with 2 x 2 table
 table(X$gender,X$safe)
@@ -92,7 +97,7 @@ c1$residuals
 c1$observed
 c1$expected
 (abs(c1$observed - c1$expected)-.5)^2/c1$expected # Chi-Squared Components
-# Interpreting this is weird since it's a 2x2. Will do so below. 
+# Interpreting this is weird since it's a 2x2. Will do so below.
 sum((abs(c1$observed - c1$expected)-.5)^2/c1$expected)
 c2<-chisq.test(table(X$gender,X$safe),correct=FALSE)
 (c2$observed - c2$expected)^2/c2$expected # Chi-Squared Components
@@ -177,7 +182,7 @@ AIC(ll.m2)
 
 BIC(ll.m2)
 -2*logLik(ll.m2) + log(nrow(ll.m2$model))*3
-lr.test(ll.m1,ll.m2)
+anova(ll.m1,ll.m2)
 #Compare to traditional Chi-squared statistic
 obs <-table(X$gender,X$safe)
 exp <- outer(rowSums(obs),colSums(obs))/sum(obs)
@@ -192,11 +197,11 @@ colnames(lldat2)[1:3] <- c("E","F","S")
 # Table 4.8
 ll.sat <- glm(Freq ~ E*F*S,data=lldat2,family="poisson")
 ll.main <- glm(Freq ~ E*S + F*S,data=lldat2,family="poisson")
-lr.test(ll.sat,ll.main)
+anova(ll.sat,ll.main)
 ll.no.ed <- glm(Freq ~ E + F*S,data=lldat2,family="poisson")
-lr.test(ll.main,ll.no.ed)
+anova(ll.main,ll.no.ed)
 ll.no.sex <- glm(Freq ~ E*S + F,data=lldat2,family="poisson")
-lr.test(ll.main,ll.no.sex)
+anova(ll.main,ll.no.sex)
 
 # Marginal Proportions, Table 4.9
 predict(ll.main,type="response")
@@ -233,7 +238,7 @@ logLik(ll.sat)
 BIC(ll.sat);AIC(ll.sat)
 
 ll.2 <- glm(Freq ~ M*F*S  + E*F*S + E*M*S + E*M*F,data=lldat3,family="poisson")
-lr.test(ll.sat,ll.2) # Can constrain 4-way interaction
+anova(ll.sat,ll.2) # Can constrain 4-way interaction
 length(coef(ll.2))
 logLik(ll.2)
 BIC(ll.2);AIC(ll.2)
@@ -258,31 +263,31 @@ length(coef(ll.6))
 logLik(ll.6)
 BIC(ll.6);AIC(ll.6)
 
-lr.test(ll.2,ll.3)
-lr.test(ll.2,ll.4)
-lr.test(ll.2,ll.5)
-lr.test(ll.2,ll.6)
+anova(ll.2,ll.3)
+anova(ll.2,ll.4)
+anova(ll.2,ll.5)
+anova(ll.2,ll.6)
 
 ll.7 <- glm(Freq ~ M*F*S  + E*F + E*M + E*S,data=lldat3,family="poisson")
 length(coef(ll.7))
 logLik(ll.7)
 BIC(ll.7);AIC(ll.7)
-lr.test(ll.2,ll.7)
+anova(ll.2,ll.7)
 ll.8 <- glm(Freq ~ M*F*S  +  E*M + E*S,data=lldat3,family="poisson")
 length(coef(ll.8))
 logLik(ll.8)
 BIC(ll.8);AIC(ll.8)
-lr.test(ll.7,ll.8) # Sig
+anova(ll.7,ll.8) # Sig
 ll.9 <- glm(Freq ~ M*F*S  + E*F +  E*S,data=lldat3,family="poisson")
 length(coef(ll.9))
 logLik(ll.9)
 BIC(ll.9);AIC(ll.9)
-lr.test(ll.7,ll.9)
+anova(ll.7,ll.9)
 ll.10 <- glm(Freq ~ M*F*S  + E*F + E*M ,data=lldat3,family="poisson")
 length(coef(ll.10))
 logLik(ll.10)
 BIC(ll.10);AIC(ll.10)
-lr.test(ll.7,ll.10)
+anova(ll.7,ll.10)
 
 lldat3 <- mutate(lldat3,yhat=round(predict(ll.7,type="response"),2))
 colnames(lldat3) <- c("Education","Minority","Female","Safe","N","Model 7 Fitted Values")

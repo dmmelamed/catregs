@@ -1,5 +1,10 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
+
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs")
 require(catregs)
 data(essUK)
 X <- filter(essUK,country=="United Kingdom")
@@ -7,14 +12,9 @@ X <- filter(essUK,country=="United Kingdom")
 X <- mutate(X,safe = ifelse(walk.alone.dark=="Safe" | walk.alone.dark==
                               "Very safe",1,0))
 X <- mutate(X, employee=ifelse(employment=="Employee",1,0),self.emp=ifelse(employment=="Self-employed",1,0),emp3=ifelse(employment=="Unemployed",1,0))
-
 X <- mutate(X,minority=ifelse(ethnic.minority=="Yes",1,0),female=ifelse(gender=="Female",1,0))
-# basic model
-
 X <- mutate(X,imm.good=ifelse(immigration.good.economy>5,1,0))
-
 X2 <- X %>% drop_na(imm.good , religious ,conservative ,  female ,  minority , age,  employment)
-
 # Reduced model
 m1 <- glm(imm.good ~  minority +  religious +   female +   age+  self.emp + employee,data=X2,family=binomial)
 summary(m1)
@@ -23,7 +23,7 @@ m2 <- glm(imm.good ~ minority + religious +  female +   age+  self.emp + employe
 summary(m2)
 require(systemfit)
 require(sandwich)
-k1 <- khb(m1,m2)
+k1 <- khb(m1,m2) # load the function. It's available in the replication folder on Github too
 print.khb(k1)
 
 
@@ -73,14 +73,14 @@ dim(mar2)
 # Compare 18 year old to 78 year olds
 fd1 <- first.diff.fitted(m1.adj,design,compare=c(13,1))
 fd2 <- first.diff.fitted(m2,design2,compare=c(13,1))
-compare.margins(margins=c(fd1$first.diff,fd2$first.diff),
-                margins.ses=c(fd1$std.error,fd2$std.error),nsim=1000000)
+compare.margins(margins=c(fd1$`First Difference`,fd2$`First Difference`),
+                margins.ses=c(fd1$`Standard Error`,fd2$`Standard Error`),nsim=1000000)
 
 pdat <- rbind(fd1,fd2)
 pdat <- mutate(pdat,mod=c("Reduced: Controlling for Residual of Conservative","Full: Controlling for Conservative"))
 pdat$mod <- factor(pdat$mod,levels=c("Reduced: Controlling for Residual of Conservative","Full: Controlling for Conservative"))
 # Figure 11.1
-ggplot(pdat,aes(x=mod,y=first.diff,ymin=ll,ymax=ul)) + theme_bw() +
+ggplot(pdat,aes(x=mod,y=`First Difference`,ymin=ll,ymax=ul)) + theme_bw() +
   geom_point() + geom_errorbar(width=.05) + scale_y_continuous(limits=c(-.25,0)) +
   geom_hline(yintercept=0) + labs(x="",y="Marginal Effect at Means (MEM) of Age")
 
@@ -151,7 +151,7 @@ m1 <- glm(safe ~ religious + minority  + female + age + self.emp + employee,data
 
 
 X2 <- X %>% select(safe , religious , minority  , female , age ,self.emp, employee)
-X2$employment <- as.factor(X2$employment)
+X2$employee <- as.factor(X2$employee)
 X2$minority<-as.factor(X2$minority)
 X2$female<-as.factor(X2$female)
 out<-mice(X2,maxit=0)
@@ -160,7 +160,7 @@ out$method # Default imputation methods
 out$predictorMatrix # Rows represent the variables used to impute missing values
 predMat <- out$predictorMatrix
 predMat[2,c(3,5)]<-0 # now minorty and age are not used in imputing religious
-out<-mice(X2,m=20,seed=1982,method=c("","norm","logreg","logreg","norm","polyreg"),printFlag = FALSE)
+out<-mice(X2,m=20,seed=1982,method=c("","norm","logreg","logreg","norm","norm","logreg"),printFlag = FALSE)
 fits<-with(out,glm(safe ~ religious + minority  + female + age + self.emp + employee,data=X,family=binomial))
 est<-pool(fits)
 summary(est)

@@ -1,6 +1,11 @@
+###
+# Updated 6/17/2024 following release of catregs on CRAN
+###
+
 
 rm(list=ls())
 require(tidyverse)
+# install.packages("catregs)
 require(catregs)
 data(essUK)
 
@@ -91,11 +96,11 @@ design2 <- margins.des(m3,expand.grid(education=8:20,religious=c(.54,3.6,6.66)))
 pdat2 <- margins.dat(m3,design2)
 pdat2$religious <- recode(pdat2$religious,".54"="Mean -1 SD","3.6"="Mean","6.66"="Mean +1 SD")
 pdat2$religious <- factor(pdat2$religious,levels=c("Mean -1 SD","Mean","Mean +1 SD"))
-ggplot(pdat2,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=religious,fill=religious)) + theme_bw() + 
+ggplot(pdat2,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=religious,fill=religious)) + theme_bw() +
   geom_ribbon(alpha=.2) + geom_line() +
   theme(legend.position="bottom") +
   labs(x="Education",y="Predicted Generalized Trust",fill="Religiousness:") + scale_x_continuous(breaks=(seq(8,20,2)))
-p1<-ggplot(pdat2,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=religious,fill=religious)) + theme_bw() + 
+p1<-ggplot(pdat2,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=religious,fill=religious)) + theme_bw() +
   geom_ribbon(alpha=.2) + geom_line() +
   theme(legend.position="bottom") +
   labs(x="Education",y="Predicted Generalized Trust",fill="Religiousness:") + scale_x_continuous(breaks=(seq(8,20,2)))
@@ -116,7 +121,7 @@ second.diff.fitted(m3,design2.eg,compare=c(4,3,2,1)) # The interaction effect is
 design3 <- margins.des(m4,expand.grid(education=2:20,minority=c(0,1)))
 pdat3 <- margins.dat(m4,design3)
 pdat3$minority <- recode(pdat3$minority,"0"="Not Minoritized","1"="Minoritized")
-ggplot(pdat3,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=minority,fill=minority)) + theme_bw() + 
+ggplot(pdat3,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=minority,fill=minority)) + theme_bw() +
   geom_ribbon(alpha=.2) + geom_line() +
   theme(legend.position="bottom") +
   labs(x="Education",y="Predicted Generalized Trust",fill="Minority Status:")
@@ -127,7 +132,7 @@ ggplot(pdat3,aes(x=education,y=fitted,ymin=ll,ymax=ul,group=minority,fill=minori
 # our diagn function does not work in this context as there as good alternatives already
 modfit <- augment(m2)
 head(modfit) # The data, with the fitted.values and residuals appended
-p1 <-ggplot(modfit,aes(x=.fitted, y = .std.resid)) + 
+p1 <-ggplot(modfit,aes(x=.fitted, y = .std.resid)) +
   geom_hline(yintercept=0,color="red") + geom_point()  + theme_bw() + labs(x="Predicted Value",y="Standardized Residual")
 p1
 
@@ -146,7 +151,7 @@ p1 # Figure 3.5
 
 # Figure 3.6
 contin_syn1 <- function(nobs = 200, xv =c (0,.6)){
-  
+
   p<-length(xv)
   X<-cbind(matrix(rnorm(nobs * (p-1)),ncol = p-1))
   X56<-cbind(1,X)
@@ -155,19 +160,19 @@ contin_syn1 <- function(nobs = 200, xv =c (0,.6)){
   out<-data.frame(cbind(py,X56[,-1]))
   names(out)<-c("py","x1")
   return(out)
-  
+
 }
 
 dat <- contin_syn1(10000,xv=c(0,.5))
 m1 <- lm(py~x1,data=dat)
 sim.dat <- data.frame(dat,y=predict(m1,dat))
 ggplot(sim.dat,aes(x=x1,y=y))+ theme_bw() +
-  geom_smooth(method="lm",se=FALSE)+ 
+  geom_smooth(method="lm",se=FALSE)+
   scale_y_continuous(limits=c(-.25,1.25),breaks=seq(-.2,1.2,.2)) +
   geom_hline(yintercept=0) + geom_hline(yintercept=1) +
   labs(y="Binary Response",x="Continuous Predictor")
 p1 <- ggplot(sim.dat,aes(x=x1,y=y))+ theme_bw() +
-  geom_smooth(method="lm",se=FALSE,color="gray55")+ 
+  geom_smooth(method="lm",se=FALSE,color="gray55")+
   scale_y_continuous(limits=c(-.2,1.2),breaks=seq(-.2,1.2,.2)) +
   geom_hline(yintercept=0) + geom_hline(yintercept=1) +
   labs(y="Binary Response",x="Continuous Predictor") + scale_x_continuous(limits=c(-.1,2.1),breaks=c(0,.5,1,1.5,2),labels=c("-4","-2","0","2","4"))
@@ -176,12 +181,12 @@ dat <- mutate(dat,
               y2=as.numeric(py>0),
               p=glm(y2~x1,data=sim.dat,family="binomial")$fitted.values)
 ggplot(dat,aes(x=x1,y=p))+ theme_bw() +
-  geom_smooth(se=FALSE)+ 
+  geom_smooth(se=FALSE)+
   scale_y_continuous(limits=c(-.25,1.25),breaks=seq(-.2,1.2,.2)) +
   geom_hline(yintercept=0) + geom_hline(yintercept=1) +
   labs(y="Logit of the Binary Response",x="Continuous Predictor")
 p2<-ggplot(dat,aes(x=x1,y=p))+ theme_bw() +
-  geom_smooth(se=FALSE,color="gray55")+ 
+  geom_smooth(se=FALSE,color="gray55")+
   scale_y_continuous(limits=c(-.2,1.2),breaks=seq(-.2,1.2,.2)) +
   geom_hline(yintercept=0) + geom_hline(yintercept=1) + scale_x_continuous(limits=c(-4.2,4.2),breaks=seq(-4,4,2)) +
   labs(y="Logit of the Binary Response",x="Continuous Predictor")
