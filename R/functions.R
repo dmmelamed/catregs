@@ -1160,12 +1160,12 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
       for (i in 1:num.sample) {
         set.seed(seed + i)
         mod2 <- mod$model[sample(1:nrow(mod$model), round(prop.sample *
-                                                            nrow(mod$model), 0), replace = FALSE), ]
+                                                            nrow(mod$model), 0), replace = TRUE), ]
         m.1 <- Epi::clogistic(mod$formula, strata = `(strata)`,
                          data = mod2)
         coefs2 <- as.numeric(na.omit(coef(m.1)))
-        design20 <- dplyr::mutate(des, lp = exp(as.matrix(design.matrix) %*%
-                                           coefs2), probs = lp/sum(lp))
+        design20 <- dplyr::mutate(des, lp2 = exp(as.matrix(design.matrix) %*%
+                                           coefs2), probs2 = lp2/sum(lp2))
         boot.dist[i, ] <- design20[, ncol(design20)]
       }
       boot.dist[, 1] <- sort(boot.dist[, 1])
