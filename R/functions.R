@@ -311,14 +311,21 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
       }
       if (is(mod,"clmm")) {
         out <- suppressMessages(data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(des[1,]))))
+        out <- out[,1:3]
+        colnames(out) <- c("dv.level","fitted","se")
+        out[,2:3]<- round(out[,2:3],rounded)
+        out <- suppressWarnings(suppressMessages(data.frame(round(des[1,],rounded),out)))
+
         if(nrow(des) >1){for(i in 2:nrow(des)){
           out2 <- suppressMessages(data.frame(emmeans::emmeans(mod,~dv,mode="prob",at=as.list(des[i,]))))
+          out2 <- out2[,1:3]
+          colnames(out2) <- c("dv.level","fitted","se")
+          out2[,2:3]<- round(out2[,2:3],rounded)
+          out2 <- suppressWarnings(suppressMessages(data.frame(round(des[i,],rounded),out2)))
           out <- rbind(out,out2)}}
-        ll <- out[,2] - qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out$SE
-        ul <- out[,2] + qnorm(1 - (alpha/2), lower.tail = TRUE) *
-          out$SE
-        marginsdat <- data.frame(des,dv.level = out[,1], fitted = round(out[,2],rounded), se = round(out[,3], rounded), ll = round(ll,rounded), ul = round(ul, rounded))
+        marginsdat <- data.frame(dplyr::mutate(out,
+                                        ll=round((fitted - qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded),
+                                        ul=round((fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded)))
       }
     }
     else {
@@ -1164,8 +1171,8 @@ margins.dat.clogit <-function (mod, design.matrix, run.boot = "no", num.sample =
         m.1 <- Epi::clogistic(mod$formula, strata = `(strata)`,
                          data = mod2)
         coefs2 <- as.numeric(na.omit(coef(m.1)))
-        design20 <- dplyr::mutate(des, lp2 = exp(as.matrix(design.matrix) %*%
-                                           coefs2), probs2 = lp2/sum(lp2))
+        design20 <- dplyr::mutate(des, lp = exp(as.matrix(design.matrix) %*%
+                                           coefs2), probs = lp/sum(lp))
         boot.dist[i, ] <- design20[, ncol(design20)]
       }
       boot.dist[, 1] <- sort(boot.dist[, 1])
