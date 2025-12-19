@@ -40,8 +40,8 @@ list.coef<-function(model,rounded=3,alpha=.05){
 
 margins.des<-function (mod, ivs, excl = "nonE",data) {
   if(is(mod,"lm") | is(mod,"glm") | is(mod,"polr") | is(mod,"multinom") | is(mod,"vglm")  |
-    is(mod,"negbin") | is(mod,"zeroinfl") | is(mod,"hurdle") | is(mod,"glmerMod")  |
-    is(mod,"clmm")  | is(mod,"lme") | is(mod,"lmerModLmerTest") | is(mod,"lmerMod")){
+     is(mod,"negbin") | is(mod,"zeroinfl") | is(mod,"hurdle") | is(mod,"glmerMod")  |
+     is(mod,"clmm")  | is(mod,"lme") | is(mod,"lmerModLmerTest") | is(mod,"lmerMod")){
 
 
     if(is(mod,"nnet")){
@@ -113,6 +113,16 @@ margins.des<-function (mod, ivs, excl = "nonE",data) {
       X <- X[,-c(1,ncol(X))]
       controls <- apply(X, 2, FUN = "mean")
       controls <- controls[-match(names(ivs), colnames(X))]
+    }else if(is(mod,"mblogit")){
+      covs <- as.character(terms(mod))[3]
+      covs <- unlist(strsplit(covs, "\\s*\\+\\s*"))
+      if (excl == "nonE") {
+      }else {
+        covs <- covs[-match(excl, covs)]
+      }
+      covs <- covs[-match(names(ivs), covs)]
+      data <- data[,match(covs,colnames(data))]
+      controls <- apply(data,MARGIN=2,FUN="mean")
     }
     else{
       X.mod <- mod$model[, -1]
@@ -137,6 +147,8 @@ margins.des<-function (mod, ivs, excl = "nonE",data) {
     design <- cbind(design, t(controls))
     return(design)} else {message("Model type not supported.")}
 }
+
+
 
 margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
                          pscl.data = data, num.sample = 1000, prop.sample = 0.9, seed = 1234) {
@@ -324,8 +336,26 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
           out2 <- suppressWarnings(suppressMessages(data.frame(round(des[i,],rounded),out2)))
           out <- rbind(out,out2)}}
         marginsdat <- data.frame(dplyr::mutate(out,
-                                        ll=round((fitted - qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded),
-                                        ul=round((fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded)))
+                                               ll=round((fitted - qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded),
+                                               ul=round((fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded)))
+      }
+      if (is(mod,"mblogit")) {
+        out <- suppressMessages(data.frame(emmeans::emmeans(mod,specs="dv",mode="prob", weights = "proportional",at=as.list(des[1,]))))
+        out <- out[,1:3]
+        colnames(out) <- c("dv.level","fitted","se")
+        out[,2:3]<- round(out[,2:3],rounded)
+        out <- suppressWarnings(suppressMessages(data.frame(round(des[1,],rounded),out)))
+
+        if(nrow(des) >1){for(i in 2:nrow(des)){
+          out2 <- suppressMessages(data.frame(emmeans::emmeans(mod,specs="dv",mode="prob", weights = "proportional",at=as.list(des[i,]))))
+          out2 <- out2[,1:3]
+          colnames(out2) <- c("dv.level","fitted","se")
+          out2[,2:3]<- round(out2[,2:3],rounded)
+          out2 <- suppressWarnings(suppressMessages(data.frame(round(des[i,],rounded),out2)))
+          out <- rbind(out,out2)}}
+        marginsdat <- data.frame(dplyr::mutate(out,
+                                               ll=round((fitted - qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded),
+                                               ul=round((fitted + qnorm(1 - (alpha/2), lower.tail = TRUE) *se),rounded)))
       }
     }
     else {
@@ -369,6 +399,9 @@ margins.dat <- function (mod, des, alpha = 0.05, rounded = 3, cumulate = "no",
     colnames(marginsdat)[match("SE", colnames(marginsdat))] <- "se"
     return(marginsdat)
   } else {message("Model type not supported.")}}
+
+
+
 
 # Take a Poisson model object of the count process.
 count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
@@ -500,19 +533,15 @@ count.fit<-function(m1,y.range,rounded=3,use.color="yes"){
 
 
 
-
-
-
-
 first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounded = 3,
                                bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                seed = 1234,cum.probs="no")  {
   m1 <- NULL; design <- NULL
-  if(is(mod,"lm") | is(mod,"glm") | is(mod,"multinom") | is(mod,"vglm")  |
+  if(is(mod,"lm") & class(mod)[2]!="mblogit" | is(mod,"lm") & class(mod)[2]=="mblogit" | is(mod,"glm") | is(mod,"multinom") | is(mod,"vglm")  |
      is(mod,"negbin") | is(mod,"zeroinfl") | is(mod,"hurdle") |
      is(mod,"glmerMod")  | is(mod,"clmm") | is(mod,"polr")){
 
-    if (bootstrap == "no" & is(mod,"lm") | bootstrap == "no" & is(mod,"glm") |
+    if (bootstrap == "no" & is(mod,"lm") & class(mod)[2]!="mblogit" | bootstrap == "no" & is(mod,"glm") |
         bootstrap == "no" & is(mod,"negbin") | bootstrap == "no" & is(mod,"lme")){
 
       des1 <- design.matrix[compare[1:2], ]
@@ -687,11 +716,26 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
       out <- message("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
     }
     else if (bootstrap == "no" & is(mod,"clmm")){out <- "Delta Method is not supported for mixed effects ordinal logistic regression. Use bootstrapping :("}
+    else if (bootstrap == "no" & is(mod,"mblogit")){out <- "Mixed effects multinomial logistic regression is not suppported in a general way. An example is provided in the following script: [first.diff.fitted.mixed.multinomial.r]"}
     else if (bootstrap == "yes" & is(mod,"glmerMod")){out<-"Bootstrapping is not supported. Use the delta method." }
     else if (bootstrap=="yes"){
       # Start Bootstrap code
       # Linear Regression
-      if(is(mod,"lm")){
+      if(is(mod,"lm"  & class(mod)[2]!="mblogit")){
+        des1 <- design.matrix[compare[1:2], ]
+        obs.diff<- predict(mod, type = "response", newdata = des1[1,]) -
+          predict(mod, type = "response", newdata = des1[2,])
+        fd.model<-mod$model
+        fd.dist <-matrix(NA,nrow=num.sample,ncol=length(obs.diff))
+        for(i in 1:num.sample){
+          set.seed(seed + i);  fd.model2 <- fd.model[sample(1:nrow(fd.model),round(prop.sample*nrow(fd.model),0),replace=TRUE),]
+          fd.modi <- lm(formula(mod),data=fd.model2)
+          obs.diffi<- predict(fd.modi, type = "response", newdata = des1[1,]) -
+            predict(fd.modi, type = "response", newdata = des1[2,])
+          fd.dist[i,] <- obs.diffi}
+        fd.dist[,1] <- sort(fd.dist[,1])
+        out <- data.frame(first.diff=round(obs.diff,rounded),sd.boot.dist=round(sd(fd.dist),rounded),ll.boot=round(fd.dist[nrow(fd.dist)*(alpha/2),],rounded),ul.boot=round(fd.dist[nrow(fd.dist)*(1-(alpha/2)),],rounded))
+      } else if(is(mod,"lm"  & class(mod)[2]=="mblogit")){ # I am working on this set of brackets....
         des1 <- design.matrix[compare[1:2], ]
         obs.diff<- predict(mod, type = "response", newdata = des1[1,]) -
           predict(mod, type = "response", newdata = des1[2,])
@@ -824,10 +868,14 @@ first.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounde
     return(out)
   }else{message("Model type is not supported.")}}
 
+
+
+
+
 second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, rounded = 3,
                                 bootstrap = "no", num.sample = 1000, prop.sample = 0.9, data,
                                 seed = 1234,cum.probs="no") {
-  if(is(mod,"lm") | is(mod,"glm") | is(mod,"polr") | is(mod,"multinom") | is(mod,"vglm")  |
+  if(is(mod,"lm")  & class(mod)[2]!="mblogit" | is(mod,"glm") | is(mod,"polr") | is(mod,"multinom") | is(mod,"vglm")  |
      is(mod,"negbin") | is(mod,"zeroinfl") |
      is(mod,"hurdle") | is(mod,"glmerMod")  | is(mod,"clmm")){
 
@@ -905,7 +953,8 @@ second.diff.fitted <- function (mod, design.matrix, compare, alpha = 0.05, round
 
     }else if (bootstrap == "no" & is(mod,"polr") & cum.probs=="yes"){
       out <- message("Cumulative probabilities are not supported with parametric inference/delta method. Try bootstrapping or non-cumulative probabilities.")
-    }else if (bootstrap == "no" & is(mod,"vglm") | bootstrap == "no" & is(mod,"zeroinfl") | bootstrap == "no" & is(mod,"hurdle") | bootstrap == "no" & is(mod,"clmm")){
+    }    else if (bootstrap == "no" & is(mod,"mblogit")){out <- "Mixed effects multinomial logistic regression is not suppported in a general way. An example is provided in the following script: [first.diff.fitted.mixed.multinomial.r]"
+    } else if (bootstrap == "no" & is(mod,"vglm") | bootstrap == "no" & is(mod,"zeroinfl") | bootstrap == "no" & is(mod,"hurdle") | bootstrap == "no" & is(mod,"clmm")){
       out<-message("Model not suppported with Delta method. Use bootstrapping.")
     } else if (bootstrap=="yes"){
 
